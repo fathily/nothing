@@ -30,6 +30,7 @@ import com.israadev.nuxlauncher.core.instance.InstanceManager
 import com.israadev.nuxlauncher.core.mods.NuxAddonImportManager
 import com.israadev.nuxlauncher.core.mods.PendingAddonImport
 import com.israadev.nuxlauncher.core.settings.SettingsManager
+import com.israadev.nuxlauncher.ui.screens.AuthScreen
 import com.israadev.nuxlauncher.ui.screens.DashboardScreen
 import com.israadev.nuxlauncher.ui.theme.NuxColors
 import com.israadev.nuxlauncher.ui.theme.NuxResponsiveTheme
@@ -59,16 +60,20 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var showCreatorNotice by remember { mutableStateOf(true) }
+            val launcherUser by AccountManager.launcherUser.collectAsState()
 
-            // Fork mode: keep the complete launcher UI and initialization,
-            // but remove the NUX launcher login/license gate from startup.
+            // Keep the original launcher login flow. Once authenticated, open the full launcher UI.
             NuxResponsiveTheme {
                 MaterialTheme {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = NuxColors.Background
                     ) {
-                        DashboardScreen()
+                        if (launcherUser == null) {
+                            AuthScreen(onAuthSuccess = { })
+                        } else {
+                            DashboardScreen()
+                        }
                     }
 
                     if (showCreatorNotice) {
@@ -80,8 +85,8 @@ class MainActivity : ComponentActivity() {
                             text = {
                                 androidx.compose.material3.Text(
                                     "Launcher ini dibuat/remake oleh Alfaa XITER.\n\n" +
-                                        "Login launcher dan license/activation NUX dinonaktifkan " +
-                                        "untuk fork ini, jadi launcher dapat langsung digunakan."
+                                        "Login launcher tetap tersedia. Kode OTP/verifikasi dikirim oleh server " +
+                                        "yang dikonfigurasi untuk launcher ini."
                                 )
                             },
                             confirmButton = {
