@@ -24,3 +24,7 @@ app/build/
 # Kotlin / OS specific
 .kotlin/
 Thumbs.db
+
+# Node backend secrets
+.env
+backend/**/.env
