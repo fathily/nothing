@@ -17,12 +17,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.israadev.nuxlauncher.core.account.AccountManager
 import com.israadev.nuxlauncher.core.instance.InstanceManager
 import com.israadev.nuxlauncher.core.mods.NuxAddonImportManager
 import com.israadev.nuxlauncher.core.mods.PendingAddonImport
@@ -42,6 +45,7 @@ class MainActivity : ComponentActivity() {
         handleIncomingAddonIntent(intent)
 
         // Initialize core engines
+        AccountManager.init(this)
         InstanceManager.init(this)
         SettingsManager.init(this)
         com.israadev.nuxlauncher.core.controls.ControlLayoutManager.init(this)
@@ -54,9 +58,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            // Fork test mode: startup goes directly to the launcher dashboard.
-            // The NUX launcher login/license activation gate is intentionally not
-            // part of this fork's startup flow.
+            var showCreatorNotice by remember { mutableStateOf(true) }
+
+            // Fork mode: keep the complete launcher UI and initialization,
+            // but remove the NUX launcher login/license gate from startup.
             NuxResponsiveTheme {
                 MaterialTheme {
                     Surface(
@@ -64,6 +69,29 @@ class MainActivity : ComponentActivity() {
                         color = NuxColors.Background
                     ) {
                         DashboardScreen()
+                    }
+
+                    if (showCreatorNotice) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { showCreatorNotice = false },
+                            title = {
+                                androidx.compose.material3.Text("ALFAA XITER")
+                            },
+                            text = {
+                                androidx.compose.material3.Text(
+                                    "Launcher ini dibuat/remake oleh Alfaa XITER.\n\n" +
+                                        "Login launcher dan license/activation NUX dinonaktifkan " +
+                                        "untuk fork ini, jadi launcher dapat langsung digunakan."
+                                )
+                            },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { showCreatorNotice = false }
+                                ) {
+                                    androidx.compose.material3.Text("MENGERTI")
+                                }
+                            }
+                        )
                     }
                 }
             }
