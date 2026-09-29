@@ -23,12 +23,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.israadev.nuxlauncher.core.account.AccountManager
 import com.israadev.nuxlauncher.core.instance.InstanceManager
 import com.israadev.nuxlauncher.core.mods.NuxAddonImportManager
 import com.israadev.nuxlauncher.core.mods.PendingAddonImport
 import com.israadev.nuxlauncher.core.settings.SettingsManager
-import com.israadev.nuxlauncher.ui.screens.AuthScreen
 import com.israadev.nuxlauncher.ui.screens.DashboardScreen
 import com.israadev.nuxlauncher.ui.theme.NuxColors
 import com.israadev.nuxlauncher.ui.theme.NuxResponsiveTheme
@@ -44,7 +42,6 @@ class MainActivity : ComponentActivity() {
         handleIncomingAddonIntent(intent)
 
         // Initialize core engines
-        AccountManager.init(this)
         InstanceManager.init(this)
         SettingsManager.init(this)
         com.israadev.nuxlauncher.core.controls.ControlLayoutManager.init(this)
@@ -57,26 +54,16 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val launcherUser by AccountManager.launcherUser.collectAsState()
-
-            // Cek apakah akun terdaftar dan sudah diaktivasi menggunakan license key
-            val isActivated = launcherUser != null && launcherUser?.isActivated == true
-
+            // Fork test mode: startup goes directly to the launcher dashboard.
+            // The NUX launcher login/license activation gate is intentionally not
+            // part of this fork's startup flow.
             NuxResponsiveTheme {
                 MaterialTheme {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = NuxColors.Background
                     ) {
-                        if (isActivated) {
-                            DashboardScreen()
-                        } else {
-                            AuthScreen(
-                                onAuthSuccess = {
-                                    // Sesi telah tersimpan di AccountManager, state compose otomatis ter-update
-                                }
-                            )
-                        }
+                        DashboardScreen()
                     }
                 }
             }
