@@ -97,20 +97,30 @@ class MainActivity : ComponentActivity() {
                     if (showCreatorNotice) {
                         androidx.compose.material3.AlertDialog(
                             onDismissRequest = { showCreatorNotice = false },
+                            containerColor = androidx.compose.ui.graphics.Color.White,
+                            titleContentColor = androidx.compose.ui.graphics.Color.Black,
+                            textContentColor = androidx.compose.ui.graphics.Color.Black,
                             title = {
-                                androidx.compose.material3.Text("ALFAA XITER")
+                                androidx.compose.material3.Text(
+                                    "AlfaaBEJIRR",
+                                    color = androidx.compose.ui.graphics.Color.Black
+                                )
                             },
                             text = {
                                 androidx.compose.material3.Text(
-                                    "Launcher ini dibuat/remake oleh Alfaa XITER.\n\n" +
-                                        "Mode Guest aktif untuk fork ini. Profil lokal dapat diubah tanpa login NUX."
+                                    "Launcher ini dibuat/remake oleh AlfaaBEJIRR.\n\n" +
+                                        "Mode Guest aktif untuk fork ini. Profil lokal dapat diubah tanpa login NUX.",
+                                    color = androidx.compose.ui.graphics.Color.Black
                                 )
                             },
                             confirmButton = {
                                 androidx.compose.material3.TextButton(
                                     onClick = { showCreatorNotice = false }
                                 ) {
-                                    androidx.compose.material3.Text("MENGERTI")
+                                    androidx.compose.material3.Text(
+                                        "MENGERTI",
+                                        color = androidx.compose.ui.graphics.Color.Black
+                                    )
                                 }
                             }
                         )
