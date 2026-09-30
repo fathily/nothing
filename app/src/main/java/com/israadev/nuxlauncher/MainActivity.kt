@@ -48,6 +48,23 @@ class MainActivity : ComponentActivity() {
 
         // Initialize core engines
         AccountManager.init(this)
+
+        // Local guest profile for this fork. It does not contact or bypass the NUX license server.
+        if (AccountManager.getActiveUser() == null) {
+            AccountManager.saveAuthUser(
+                this,
+                com.israadev.nuxlauncher.core.auth.AuthUser(
+                    uid = "guest-${java.util.UUID.randomUUID()}",
+                    email = "guest@local",
+                    username = "Guest",
+                    photoURL = "",
+                    platform = "android",
+                    isActivated = true,
+                    tier = "cracked"
+                )
+            )
+        }
+
         InstanceManager.init(this)
         SettingsManager.init(this)
         com.israadev.nuxlauncher.core.controls.ControlLayoutManager.init(this)
@@ -86,8 +103,7 @@ class MainActivity : ComponentActivity() {
                             text = {
                                 androidx.compose.material3.Text(
                                     "Launcher ini dibuat/remake oleh Alfaa XITER.\n\n" +
-                                        "Login launcher tetap tersedia. Kode OTP/verifikasi dikirim oleh server " +
-                                        "yang dikonfigurasi untuk launcher ini."
+                                        "Mode Guest aktif untuk fork ini. Profil lokal dapat diubah tanpa login NUX."
                                 )
                             },
                             confirmButton = {
