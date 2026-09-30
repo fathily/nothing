@@ -161,7 +161,6 @@ fun SettingsScreen(
             return
         }
         val user = launcherUser ?: return
-        val uid = user.uid
         if (cleanName == user.username) {
             usernameError = null
             Toast.makeText(context, "Username tidak berubah.", Toast.LENGTH_SHORT).show()
@@ -170,8 +169,17 @@ fun SettingsScreen(
 
         usernameError = null
         isSavingUsername = true
+
+        // Guest/cracked profile is fully local: do not require the NUX server.
+        if (user.email.equals("guest@local", ignoreCase = true) || user.tier.equals("cracked", ignoreCase = true)) {
+            AccountManager.updateProfile(context, newUsername = cleanName)
+            isSavingUsername = false
+            Toast.makeText(context, "Username lokal berhasil diubah menjadi $cleanName!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         scope.launch {
-            val res = AuthService.updateProfile(uid = uid, newUsername = cleanName)
+            val res = AuthService.updateProfile(uid = user.uid, newUsername = cleanName)
             res.onSuccess {
                 AccountManager.updateProfile(context, newUsername = cleanName)
                 Toast.makeText(context, "Username berhasil diubah menjadi $cleanName!", Toast.LENGTH_SHORT).show()
@@ -582,19 +590,32 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("Status Lisensi", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NuxColors.GrayNeutral)
-                                val tierText = if (launcherUser?.isActivated == true) {
-                                    when (launcherUser?.tier?.lowercase()) {
+                                val tier = launcherUser?.tier?.lowercase()
+                                val isCrackedGuest = launcherUser?.email.equals("guest@local", ignoreCase = true) ||
+                                    tier == "cracked"
+
+                                val tierText = when {
+                                    isCrackedGuest -> "CRACKED LICENSE"
+                                    launcherUser?.isActivated == true -> when (tier) {
                                         "monthly" -> "PREMIUM BULANAN"
                                         "yearly" -> "PREMIUM TAHUNAN"
                                         else -> "PREMIUM LIFETIME"
                                     }
-                                } else {
-                                    "TIDAK AKTIF"
+                                    else -> "TIDAK AKTIF"
                                 }
+
                                 NuxBadge(
                                     text = tierText,
-                                    backgroundColor = if (launcherUser?.isActivated == true) NuxColors.ForestGreen.copy(alpha = 0.2f) else NuxColors.Coral.copy(alpha = 0.2f),
-                                    textColor = if (launcherUser?.isActivated == true) NuxColors.MintGreen else NuxColors.Coral
+                                    backgroundColor = if (isCrackedGuest || launcherUser?.isActivated == true) {
+                                        NuxColors.ForestGreen.copy(alpha = 0.2f)
+                                    } else {
+                                        NuxColors.Coral.copy(alpha = 0.2f)
+                                    },
+                                    textColor = if (isCrackedGuest || launcherUser?.isActivated == true) {
+                                        NuxColors.MintGreen
+                                    } else {
+                                        NuxColors.Coral
+                                    }
                                 )
                             }
 
