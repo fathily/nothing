@@ -1069,30 +1069,65 @@ fun GameScreen(
         val screenWidth = constraints.maxWidth.toFloat()
         val screenHeight = constraints.maxHeight.toFloat()
 
+        // The game framebuffer can have a different aspect ratio than the physical
+        // display. SurfaceView scales its buffer to the View bounds without preserving
+        // aspect ratio, so using fillMaxSize() would stretch 4:3/16:10/custom modes.
+        // Keep the actual SurfaceView at the same aspect ratio as the selected
+        // framebuffer and center it inside the full-screen input/HUD layer.
+        val renderAspect = remember(
+            launcherSettings.gameResolutionMode,
+            launcherSettings.customResolutionWidth,
+            launcherSettings.customResolutionHeight,
+            launcherSettings.resolutionRatio
+        ) {
+            when (launcherSettings.gameResolutionMode.uppercase()) {
+                "1920X1080" -> 1920f / 1080f
+                "4:3" -> 4f / 3f
+                "MCSX" -> 1280f / 960f
+                "CUSTOM" -> {
+                    val w = launcherSettings.customResolutionWidth.coerceAtLeast(1)
+                    val h = launcherSettings.customResolutionHeight.coerceAtLeast(1)
+                    w.toFloat() / h.toFloat()
+                }
+                else -> launcherSettings.resolutionRatio.coerceIn(0.25f, 4f)
+            }
+        }
+
+        val renderWidthPx = minOf(screenWidth, screenHeight * renderAspect)
+        val renderHeightPx = minOf(screenHeight, screenWidth / renderAspect)
+        val renderLeftPx = (screenWidth - renderWidthPx) / 2f
+        val renderTopPx = (screenHeight - renderHeightPx) / 2f
+        val density = LocalDensity.current
+        val renderWidthDp = with(density) { renderWidthPx.toDp() }
+        val renderHeightDp = with(density) { renderHeightPx.toDp() }
+
         var cursorX by remember { mutableFloatStateOf(0f) }
         var cursorY by remember { mutableFloatStateOf(0f) }
         var isMousePressed by remember { mutableStateOf(false) }
 
-        LaunchedEffect(screenWidth, screenHeight) {
-            if (cursorX == 0f && screenWidth > 0f) {
-                cursorX = screenWidth / 2f
-                cursorY = screenHeight / 2f
-                val winW = CallbackBridge.windowWidth
-                val winH = CallbackBridge.windowHeight
-                val targetX = if (screenWidth > 0 && winW > 0) cursorX * (winW.toFloat() / screenWidth) else cursorX
-                val targetY = if (screenHeight > 0 && winH > 0) cursorY * (winH.toFloat() / screenHeight) else cursorY
-                CallbackBridge.sendCursorPos(targetX, targetY)
+        LaunchedEffect(renderWidthPx, renderHeightPx) {
+            cursorX = renderLeftPx + renderWidthPx / 2f
+            cursorY = renderTopPx + renderHeightPx / 2f
+
+            val winW = CallbackBridge.windowWidth
+            val winH = CallbackBridge.windowHeight
+            if (winW > 0 && winH > 0) {
+                CallbackBridge.sendCursorPos(winW / 2f, winH / 2f)
             }
         }
 
-        // 1. OpenGL/Vulkan Surface View (Pure rendering surface)
+        // 1. OpenGL/Vulkan Surface View.
+        // The SurfaceView itself is constrained to the selected aspect ratio;
+        // black space outside it becomes letterbox/pillarbox instead of stretching.
         AndroidView(
             factory = { ctx ->
                 SurfaceView(ctx).apply {
                     onSurfaceReady(holder)
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .size(renderWidthDp, renderHeightDp)
+                .align(Alignment.Center)
         )
 
         // 2. Zalith-Style Touchpad & Input Controller Layer
@@ -1105,8 +1140,8 @@ fun GameScreen(
             cursorPosition = Offset(cursorX, cursorY),
             cursorSensitivity = launcherSettings.cursorSensitivity / 100f,
             onCursorPositionChange = { newPos ->
-                cursorX = newPos.x
-                cursorY = newPos.y
+                cursorX = newPos.x.coerceIn(renderLeftPx, renderLeftPx + renderWidthPx)
+                cursorY = newPos.y.coerceIn(renderTopPx, renderTopPx + renderHeightPx)
             },
             onMouse = {
                 isControlVisible = false
@@ -1115,15 +1150,32 @@ fun GameScreen(
                 // Do not auto-show; GUI visibility is explicitly controlled by the user via the HIDE/SHOW GUI button
             },
             onTap = { pos ->
-                val winW = CallbackBridge.windowWidth
-                val winH = CallbackBridge.windowHeight
-                val targetX = if (screenWidth > 0 && winW > 0) pos.x * (winW.toFloat() / screenWidth) else pos.x
-                val targetY = if (screenHeight > 0 && winH > 0) pos.y * (winH.toFloat() / screenHeight) else pos.y
-                CallbackBridge.putMouseEventWithCoords(
-                    LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT,
-                    targetX,
-                    targetY
-                )
+                // Ignore taps in the letterbox/pillarbox area and map only the
+                // visible game rectangle back to the actual framebuffer.
+                val insideGame =
+                    pos.x >= renderLeftPx &&
+                        pos.x <= renderLeftPx + renderWidthPx &&
+                        pos.y >= renderTopPx &&
+                        pos.y <= renderTopPx + renderHeightPx
+
+                if (insideGame) {
+                    val winW = CallbackBridge.windowWidth
+                    val winH = CallbackBridge.windowHeight
+                    val localX = pos.x - renderLeftPx
+                    val localY = pos.y - renderTopPx
+                    val targetX = if (renderWidthPx > 0 && winW > 0) {
+                        localX * (winW.toFloat() / renderWidthPx)
+                    } else localX
+                    val targetY = if (renderHeightPx > 0 && winH > 0) {
+                        localY * (winH.toFloat() / renderHeightPx)
+                    } else localY
+
+                    CallbackBridge.putMouseEventWithCoords(
+                        LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT,
+                        targetX,
+                        targetY
+                    )
+                }
             },
             onLongPress = {
                 isMousePressed = true
