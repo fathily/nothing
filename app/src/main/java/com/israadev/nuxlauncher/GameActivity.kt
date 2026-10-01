@@ -227,29 +227,33 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
 
     private fun getScaledDisplayDimensions(): Pair<Int, Int> {
         val settings = SettingsManager.settings.value
-        val totalRamMb = com.israadev.nuxlauncher.core.settings.SettingsManager.getTotalDeviceMemoryMb(this)
-        val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
+        val displayWidth = resources.displayMetrics.widthPixels.coerceAtLeast(1)
+        val displayHeight = resources.displayMetrics.heightPixels.coerceAtLeast(1)
 
-        val userRatio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.25f)
-        // Auto mode lowers the game's render surface on weaker devices, while never
-        // reducing a manually selected lower ratio even further.
-        val autoRatio = when {
-            !settings.autoOptimizeMinecraft -> 1.0f
-            totalRamMb <= 4096 -> 0.75f
-            totalRamMb <= 6144 || lowEnd -> 0.85f
-            else -> 1.0f
+        return when (settings.gameResolutionMode.uppercase()) {
+            "1920X1080" -> 1920 to 1080
+            "4:3" -> {
+                // Keep the current display height and derive a 4:3 framebuffer.
+                val height = displayHeight
+                (height * 4 / 3).coerceAtLeast(320) to height.coerceAtLeast(240)
+            }
+            "MCSX" -> 1280 to 960
+            "CUSTOM" -> settings.customResolutionWidth.coerceIn(320, 3840) to settings.customResolutionHeight.coerceIn(240, 2160)
+            else -> {
+                val totalRamMb = SettingsManager.getTotalDeviceMemoryMb(this)
+                val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
+                val userRatio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.25f)
+                val autoRatio = when {
+                    !settings.autoOptimizeMinecraft -> 1.0f
+                    totalRamMb <= 4096 -> 0.75f
+                    totalRamMb <= 6144 || lowEnd -> 0.85f
+                    else -> 1.0f
+                }
+                val ratio = if (settings.autoOptimizeMinecraft) minOf(userRatio, autoRatio) else userRatio
+                (displayWidth * ratio).roundToInt().coerceAtLeast(320) to (displayHeight * ratio).roundToInt().coerceAtLeast(240)
+            }
         }
-        val ratio = if (settings.autoOptimizeMinecraft) {
-            minOf(userRatio, autoRatio)
-        } else {
-            userRatio
-        }
-
-        val width = (resources.displayMetrics.widthPixels * ratio).roundToInt()
-        val height = (resources.displayMetrics.heightPixels * ratio).roundToInt()
-        return Pair(width, height)
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SettingsManager.init(this)
@@ -388,7 +392,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         CallbackBridge.sendUpdateWindowSize(width, height)
-        LoggerBridge.append("▷ [SurfaceChanged] Native surface buffer: ${width}x${height} (Scale: ${SettingsManager.settings.value.resolutionRatio}%)")
+        LoggerBridge.append("▷ [SurfaceChanged] Game framebuffer: ${width}x${height} (Mode: ${SettingsManager.settings.value.gameResolutionMode})")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
