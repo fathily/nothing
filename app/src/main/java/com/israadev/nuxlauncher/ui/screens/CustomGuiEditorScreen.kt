@@ -722,7 +722,7 @@ fun CustomGuiEditorScreen(
                         Column(Modifier.weight(1f)) { Text("PILIH INPUT KEY MINECRAFT", fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color.White); Text("Keyboard virtual + mouse + aksi Minecraft", fontSize = 9.5.sp, color = Color(0xFFA5D6A7)) }
                         Box(Modifier.size(30.dp).clip(CircleShape).background(Color(0xFF3B1E22)).border(1.dp, Color(0xFF7F3840), CircleShape).clickable { showKeyPickerForButtonId = null }, contentAlignment = Alignment.Center) { Text("✕", color = Color(0xFFFF8A80), fontWeight = FontWeight.Black) }
                     }
-                    @Composable fun KeyButton(label: String, weight: Float = 1f, height: androidx.compose.ui.unit.Dp = 34.dp) {
+                    @Composable fun androidx.compose.foundation.layout.RowScope.KeyButton(label: String, weight: Float = 1f, height: androidx.compose.ui.unit.Dp = 34.dp) {
                         val key = option(label)
                         Box(Modifier.weight(weight).height(height).clip(RoundedCornerShape(6.dp)).background(Color(0xFF2A2D2C)).border(1.dp, Color(0xFF424644), RoundedCornerShape(6.dp)).clickable(enabled = key != null) { key?.let(::selectKey) }, contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = if (label.length > 6) 7.sp else 9.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
                     }
