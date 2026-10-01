@@ -238,7 +238,25 @@ object NuxRendererRegistry {
             }
         }
 
-        // 3. If selectedId is "mobileglues" or mentions mobileglue
+        // 3. Voxy/desktop-GL renderer support:
+        // Prefer an installed Kopper Zink renderer plugin when the user selects Zink.
+        // This keeps the launcher compatible with the Android Voxy stack without
+        // bundling Voxy itself or any proprietary mod code.
+        if (selectedId.contains("zink", ignoreCase = true)) {
+            val pluginZink = pluginRenderers.firstOrNull {
+                it.rendererId.contains("zink", ignoreCase = true) ||
+                    it.displayName.contains("kopper zink", ignoreCase = true) ||
+                    it.libraryName.contains("glxshim", ignoreCase = true)
+            }
+            if (pluginZink != null) {
+                return pluginZink
+            }
+            if (File(nativeLibDir, RENDERER_ZINK.libraryName).exists()) {
+                return RENDERER_ZINK
+            }
+        }
+
+        // 4. If selectedId is "mobileglues" or mentions mobileglue
         if (selectedId.contains("mobileglue", ignoreCase = true)) {
             if (hasMobileGlues) {
                 return RENDERER_MOBILEGLUES
@@ -255,7 +273,7 @@ object NuxRendererRegistry {
             }
         }
 
-        // 4. Auto mode
+        // 5. Auto mode
         if (selectedId.equals("auto", ignoreCase = true)) {
             val isModernMc = isModernMinecraft(mcVersion)
             return if (isModernMc && hasNgGl4es) {
@@ -271,13 +289,13 @@ object NuxRendererRegistry {
             }
         }
 
-        // 5. If requested target .so exists in nativeLibDir
+        // 6. If requested target .so exists in nativeLibDir
         val targetSo = File(nativeLibDir, requested.libraryName)
         if (targetSo.exists()) {
             return requested
         }
 
-        // 6. Fallback aman jika library target tidak ada di nativeLibDir
+        // 7. Fallback aman jika library target tidak ada di nativeLibDir
         return if (hasNgGl4es) RENDERER_KRYPTON else if (hasMobileGlues) RENDERER_MOBILEGLUES else RENDERER_GL4ES
     }
 
