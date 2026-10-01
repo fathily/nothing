@@ -227,7 +227,24 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
 
     private fun getScaledDisplayDimensions(): Pair<Int, Int> {
         val settings = SettingsManager.settings.value
-        val ratio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.5f)
+        val totalRamMb = com.israadev.nuxlauncher.core.settings.SettingsManager.getTotalDeviceMemoryMb(this)
+        val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
+
+        val userRatio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.25f)
+        // Auto mode lowers the game's render surface on weaker devices, while never
+        // reducing a manually selected lower ratio even further.
+        val autoRatio = when {
+            !settings.autoOptimizeMinecraft -> 1.0f
+            totalRamMb <= 4096 -> 0.75f
+            totalRamMb <= 6144 || lowEnd -> 0.85f
+            else -> 1.0f
+        }
+        val ratio = if (settings.autoOptimizeMinecraft) {
+            minOf(userRatio, autoRatio)
+        } else {
+            userRatio
+        }
+
         val width = (resources.displayMetrics.widthPixels * ratio).roundToInt()
         val height = (resources.displayMetrics.heightPixels * ratio).roundToInt()
         return Pair(width, height)
@@ -454,13 +471,57 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     set("options.narrator", "0")
                     set("narrator", "0")
 
-                    // Ensure default low-end mobile performance options if enabled in settings
+                    // Apply a real game-performance preset. The old implementation only
+                    // filled missing keys, so existing options could silently keep expensive
+                    // graphics settings. Auto Optimize now actively applies the preset.
                     if (activeSettings.autoOptimizeMinecraft) {
-                        if (!containsKey("clouds")) set("clouds", "false")
-                        if (!containsKey("renderClouds")) set("renderClouds", "false")
-                        if (!containsKey("entityShadows")) set("entityShadows", "false")
-                        if (!containsKey("renderDistance")) set("renderDistance", "2")
-                        if (!containsKey("simulationDistance")) set("simulationDistance", "5")
+                        val totalRamMb = com.israadev.nuxlauncher.core.settings.SettingsManager.getTotalDeviceMemoryMb(this@GameActivity)
+                        val cores = Runtime.getRuntime().availableProcessors()
+                        val lowEnd = totalRamMb <= 4096 || cores <= 4
+                        val ultraLow = totalRamMb <= 3072 || cores <= 2
+
+                        val renderDistance = when {
+                            ultraLow -> 4
+                            lowEnd -> 5
+                            totalRamMb <= 6144 -> 7
+                            else -> 8
+                        }
+                        val simulationDistance = when {
+                            ultraLow -> 3
+                            lowEnd -> 4
+                            else -> 5
+                        }
+
+                        val refreshRate = runCatching {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                display?.refreshRate ?: 60f
+                            } else {
+                                @Suppress("DEPRECATION")
+                                windowManager.defaultDisplay.refreshRate
+                            }
+                        }.getOrDefault(60f)
+                        val targetFps = when {
+                            ultraLow -> 45
+                            lowEnd -> 60
+                            refreshRate >= 90f -> 90
+                            else -> 60
+                        }
+
+                        set("renderDistance", renderDistance.toString())
+                        set("simulationDistance", simulationDistance.toString())
+                        set("graphics", "0")
+                        set("fancyGraphics", "false")
+                        set("clouds", "false")
+                        set("renderClouds", "false")
+                        set("entityShadows", "false")
+                        set("particles", if (ultraLow) "1" else "2")
+                        set("ao", "0")
+                        set("mipmapLevels", "0")
+                        set("anisotropicFiltering", "1")
+                        set("maxFps", targetFps.toString())
+                        set("enableVsync", "false")
+                        set("biomeBlendRadius", "0")
+                        set("useVbo", "true")
                     }
 
                     set("overrideWidth", "$targetWidth")
@@ -766,9 +827,35 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 jvmArgs.add("-Dnetworkaddress.cache.ttl=30")
                 jvmArgs.add("-Dnetworkaddress.cache.negative.ttl=10")
 
+                // Adaptive heap sizing prevents Minecraft from reserving too much RAM
+                // on low-memory phones while still respecting the user's setting on stronger devices.
+                val totalRamMb = com.israadev.nuxlauncher.core.settings.SettingsManager.getTotalDeviceMemoryMb(this@GameActivity)
+                val availableRamMb = com.israadev.nuxlauncher.core.settings.SettingsManager.getAvailableDeviceMemoryMb(this@GameActivity)
+                val requestedRamMb = activeSettings.ramMb.coerceAtLeast(768)
+                val maxSafeRamMb = when {
+                    totalRamMb <= 3072 -> (totalRamMb - 900).coerceAtLeast(1024)
+                    totalRamMb <= 4096 -> (totalRamMb - 1100).coerceAtLeast(1536)
+                    totalRamMb <= 6144 -> (totalRamMb - 1400).coerceAtLeast(2048)
+                    else -> (totalRamMb - 1800).coerceAtLeast(3072)
+                }
+                val effectiveRamMb = minOf(requestedRamMb, maxSafeRamMb, (availableRamMb + 512).coerceAtLeast(1024))
+                val effectiveInitialHeapMb = activeSettings.initialHeapMb
+                    .coerceAtLeast(128)
+                    .coerceAtMost((effectiveRamMb / 3).coerceAtLeast(128))
+
                 jvmArgs.add("-XX:ActiveProcessorCount=${Runtime.getRuntime().availableProcessors()}")
-                jvmArgs.add("-Xms${activeSettings.initialHeapMb}M")
-                jvmArgs.add("-Xmx${activeSettings.ramMb}M")
+                jvmArgs.add("-Xms${effectiveInitialHeapMb}M")
+                jvmArgs.add("-Xmx${effectiveRamMb}M")
+
+                if (activeSettings.autoOptimizeMinecraft) {
+                    // These are standard HotSpot 17 options. G1 targets shorter pauses,
+                    // while explicit-GC suppression avoids avoidable full-GC stalls.
+                    jvmArgs.add("-XX:+UseG1GC")
+                    jvmArgs.add("-XX:MaxGCPauseMillis=100")
+                    jvmArgs.add("-XX:+DisableExplicitGC")
+                    jvmArgs.add("-XX:+UseStringDeduplication")
+                    LoggerBridge.append("▷ [Game Optimize] RAM=${effectiveRamMb}MB, Xms=${effectiveInitialHeapMb}MB, G1GC enabled")
+                }
                 if (activeSettings.customJvmArgs.isNotBlank()) {
                     activeSettings.customJvmArgs.split(" ")
                         .map { it.trim() }
