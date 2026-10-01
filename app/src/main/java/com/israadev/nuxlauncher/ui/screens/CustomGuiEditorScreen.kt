@@ -707,98 +707,43 @@ fun CustomGuiEditorScreen(
         }
     }
 
-    // Keycode Picker Dialog
+    // Keyboard-style Minecraft input picker.
     if (showKeyPickerForButtonId != null) {
         val targetId = showKeyPickerForButtonId!!
-        Dialog(onDismissRequest = { showKeyPickerForButtonId = null }) {
-            NuxCard(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .fillMaxHeight(0.85f),
-                backgroundColor = Color(0xFF16201B),
-                shadowOffset = 6.dp,
-                cornerRadius = 16.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Pilih Input Key Minecraft", fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color.White)
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(0xFF3B1E22), CircleShape)
-                                .border(1.dp, Color(0xFF5E2D32), CircleShape)
-                                .clickable { showKeyPickerForButtonId = null },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✕", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFFF8A80))
-                        }
+        fun selectKey(option: com.israadev.nuxlauncher.core.controls.KeyOption) {
+            buttonsList = buttonsList.map { if (it.id == targetId) it.copy(keyCode = option.keyCode, isMouseButton = option.isMouseButton, mouseButton = option.mouseButton, isScroll = option.isScroll, name = if (option.isScroll) "SCROLL" else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") option.displayName.take(8) else it.name) else it }
+            showKeyPickerForButtonId = null
+        }
+        fun option(label: String): com.israadev.nuxlauncher.core.controls.KeyOption? = KeycodeCatalog.ALL_KEYS.firstOrNull { it.displayName.equals(label, ignoreCase = true) }
+        Dialog(onDismissRequest = { showKeyPickerForButtonId = null }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = true)) {
+            NuxCard(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.94f), backgroundColor = Color(0xFF171B19), shadowOffset = 8.dp, cornerRadius = 16.dp) {
+                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) { Text("PILIH INPUT KEY MINECRAFT", fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color.White); Text("Keyboard virtual + mouse + aksi Minecraft", fontSize = 9.5.sp, color = Color(0xFFA5D6A7)) }
+                        Box(Modifier.size(30.dp).clip(CircleShape).background(Color(0xFF3B1E22)).border(1.dp, Color(0xFF7F3840), CircleShape).clickable { showKeyPickerForButtonId = null }, contentAlignment = Alignment.Center) { Text("✕", color = Color(0xFFFF8A80), fontWeight = FontWeight.Black) }
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val grouped = KeycodeCatalog.ALL_KEYS.groupBy { it.category }
-                        grouped.forEach { (category, keys) ->
-                            item {
-                                Text(
-                                    text = category.uppercase(),
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF69F0AE),
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                                )
-                            }
-                            items(keys) { keyOpt ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
-                                        .border(1.dp, Color(0xFF2F4237), RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            buttonsList = buttonsList.map {
-                                                if (it.id == targetId) {
-                                                    it.copy(
-                                                        keyCode = keyOpt.keyCode,
-                                                        isMouseButton = keyOpt.isMouseButton,
-                                                        mouseButton = keyOpt.mouseButton,
-                                                        isScroll = keyOpt.isScroll,
-                                                        name = if (keyOpt.isScroll) "SCROLL"
-                                                        else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") {
-                                                            keyOpt.displayName.substringBefore(" ").take(6)
-                                                        } else it.name
-                                                    )
-                                                } else it
-                                            }
-                                            showKeyPickerForButtonId = null
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                                ) {
-                                    Text(
-                                        text = keyOpt.displayName,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
+                    @Composable fun KeyButton(label: String, weight: Float = 1f, height: androidx.compose.ui.unit.Dp = 34.dp) {
+                        val key = option(label)
+                        Box(Modifier.weight(weight).height(height).clip(RoundedCornerShape(6.dp)).background(Color(0xFF2A2D2C)).border(1.dp, Color(0xFF424644), RoundedCornerShape(6.dp)).clickable(enabled = key != null) { key?.let(::selectKey) }, contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = if (label.length > 6) 7.sp else 9.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
                     }
+                    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("ESC","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12").forEach { KeyButton(it) } }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("1","2","3","4","5","6","7","8","9","0").forEach { KeyButton(it) }; KeyButton("-"); KeyButton("="); KeyButton("BACKSPACE", 1.8f) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { KeyButton("TAB", 1.35f); listOf("Q","W","E","R","T","Y","U","I","O","P").forEach { KeyButton(it) }; KeyButton("["); KeyButton("]") }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { KeyButton("CAPS LOCK", 1.6f); listOf("A","S","D","F","G","H","J","K","L").forEach { KeyButton(it) }; KeyButton(";"); KeyButton("ENTER", 1.5f) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { KeyButton("SHIFT", 1.8f); listOf("Z","X","C","V","B","N","M").forEach { KeyButton(it) }; KeyButton(","); KeyButton("."); KeyButton("/"); KeyButton("SHIFT", 1.8f) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { KeyButton("CTRL", 1.2f); KeyButton("ALT", 1.2f); KeyButton("SPACE", 5f); KeyButton("ALT", 1.2f); KeyButton("CTRL", 1.2f) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("INSERT","HOME","PAGE UP","DELETE","END","PAGE DOWN","ARROW UP","ARROW LEFT","ARROW DOWN","ARROW RIGHT").forEach { KeyButton(it, height = 30.dp) } }
+                        Text("MOUSE", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("Mouse Kiri (Attack/Break)","Mouse Kanan (Use/Place)","Mouse Tengah (Pick Block)","Scroll Wheel (Slide Naik/Turun)").forEach { label -> val key = option(label); val shown = label.substringBefore(" (").removePrefix("Mouse ").removePrefix("Scroll Wheel "); Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF202622)).border(1.dp, Color(0xFF385044), RoundedCornerShape(6.dp)).clickable(enabled = key != null) { key?.let(::selectKey) }, contentAlignment = Alignment.Center) { Text(shown, color = Color.White, fontSize = 7.5.sp, fontWeight = FontWeight.Bold, maxLines = 1) } } }
+                        Text("AKSI MINECRAFT", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("E (Inventory)","Q (Drop Item)","F (Swap Hand)","T (Buka Chat)","ESCAPE (Pause/Menu)","TAB (Daftar Player)").forEach { label -> KeyButton(label.substringBefore(" ("), height = 34.dp) } }
+                    }
+                    Text("Tap tombol keyboard = langsung dipasang ke tombol yang sedang diedit", color = Color(0xFF7D8B83), fontSize = 8.sp)
                 }
             }
         }
     }
-
     // Reset Confirmation Dialog
     if (showResetConfirmDialog) {
         Dialog(onDismissRequest = { showResetConfirmDialog = false }) {
