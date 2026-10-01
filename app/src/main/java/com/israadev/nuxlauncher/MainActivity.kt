@@ -135,7 +135,6 @@ class MainActivity : ComponentActivity() {
         hideSystemBars()
         // Re-init instances in case storage permission was just granted
         InstanceManager.init(this)
-        com.israadev.nuxlauncher.core.renderer.NuxRendererPluginManager.scanPlugins(this)
         com.israadev.nuxlauncher.core.crash.CrashManager.checkAndNotify(this)
         com.israadev.nuxlauncher.core.social.NuxSocialManager.setInGame(false)
         com.israadev.nuxlauncher.core.social.NuxSocialManager.onAppForeground()
