@@ -1089,7 +1089,9 @@ fun GameScreen(
                     val h = launcherSettings.customResolutionHeight.coerceAtLeast(1)
                     w.toFloat() / h.toFloat()
                 }
-                // Native keeps the device/window aspect ratio; resolutionRatio only\n            // changes pixel density and must never be treated as an aspect ratio.\n            else -> if (screenHeight > 0f) screenWidth / screenHeight else 16f / 9f
+                // Native keeps the device/window aspect ratio; resolutionRatio only
+                // changes pixel density and must never be treated as an aspect ratio.
+                else -> if (screenHeight > 0f) screenWidth / screenHeight else 16f / 9f
             }
         }
 
@@ -1311,7 +1313,6 @@ fun GameScreen(
         }
 
         // 4. Virtual Controls & Customizable System Controls (FPS, Keyboard, Hide/Show GUI, Close)
-        val density = LocalDensity.current
         customButtons.forEach { btn ->
             val btnWidthPx = with(density) { btn.widthDp.dp.toPx() }
             val btnHeightPx = with(density) { btn.heightDp.dp.toPx() }
