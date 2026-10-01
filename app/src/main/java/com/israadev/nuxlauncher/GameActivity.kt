@@ -454,6 +454,46 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
         return super.dispatchTouchEvent(event)
     }
 
+    private fun findInstalledNativePluginDirs(): List<File> {
+        val result = mutableListOf<File>()
+        try {
+            val pm = packageManager
+            val apps = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+            for (info in apps) {
+                if (info.packageName == packageName) continue
+                val meta = info.metaData ?: continue
+                if (meta.getBoolean("FCLNativePlugin", false)) {
+                    val dir = File(info.nativeLibraryDir)
+                    if (dir.isDirectory) result.add(dir)
+                }
+            }
+        } catch (e: Throwable) {
+            LoggerBridge.append("▷ [Native Plugins] Scan failed: ${e.message}")
+        }
+        return result.distinctBy { it.absolutePath }
+    }
+
+    private fun findVoxyMod(gameDir: File): File? {
+        val modsDir = File(gameDir, "mods")
+        return modsDir.listFiles()
+            ?.firstOrNull {
+                it.isFile &&
+                    it.extension.equals("jar", ignoreCase = true) &&
+                    it.name.contains("voxy", ignoreCase = true) &&
+                    !it.name.contains("android-compat", ignoreCase = true)
+            }
+    }
+
+    private fun findVoxyCompatMod(gameDir: File): File? {
+        val modsDir = File(gameDir, "mods")
+        return modsDir.listFiles()
+            ?.firstOrNull {
+                it.isFile &&
+                    it.extension.equals("jar", ignoreCase = true) &&
+                    it.name.contains("voxy-android-compat", ignoreCase = true)
+            }
+    }
+
     private fun startGameJVM() {
         thread(name = "NUX-JVM-Thread") {
             try {
@@ -537,6 +577,17 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 // Combined Library Path
                 var ldLibraryPath = if (lwjglNativesDirPath.isNotBlank()) "$lwjglNativesDirPath:$nativeLibDir" else nativeLibDir
 
+                // Voxy Android support: expose installed FCL native-plugin libraries
+                // (for example RocksDB/Turnip plugin packages) to the Minecraft JVM.
+                val nativePluginDirs = findInstalledNativePluginDirs()
+                if (nativePluginDirs.isNotEmpty()) {
+                    ldLibraryPath = (nativePluginDirs.map { it.absolutePath } + ldLibraryPath.split(File.pathSeparator))
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .joinToString(File.pathSeparator)
+                    LoggerBridge.append("▷ [Native Plugins] Added ${nativePluginDirs.size} external native plugin path(s)")
+                }
+
                 // Setup Environment Variables
                 // Scan external renderer plugins in this process (:game)
                 try {
@@ -545,13 +596,30 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     LoggerBridge.append("▷ [Renderer] Plugin scan error: ${e.message}")
                 }
 
-                // Resolve Selected Graphics Renderer
-                val targetRenderer = NuxRendererRegistry.resolveRenderer(
-                    selectedId = activeSettings.selectedRenderer,
+                // Resolve Selected Graphics Renderer.
+                // If Voxy is installed in this instance, force the desktop-GL Zink path
+                // so an installed Kopper Zink plugin can be selected automatically.
+                val voxyMod = findVoxyMod(gameDir)
+                val voxyCompatMod = findVoxyCompatMod(gameDir)
+                val rendererSelection = if (voxyMod != null) "zink" else activeSettings.selectedRenderer
+
+                if (voxyMod != null) {
+                    LoggerBridge.append("▷ [Voxy] Detected ${voxyMod.name}; forcing Zink/Kopper renderer path")
+                    if (voxyCompatMod == null) {
+                        LoggerBridge.append("▷ [Voxy] WARNING: voxy-android-compat is not installed; PC Voxy may still fail on Android")
+                    }
+                }
+
+                var targetRenderer = NuxRendererRegistry.resolveRenderer(
+                    selectedId = rendererSelection,
                     mcVersion = mcVersion,
                     nativeLibDir = File(nativeLibDir),
                     context = this
                 )
+
+                if (voxyMod != null && !targetRenderer.displayName.contains("zink", ignoreCase = true)) {
+                    LoggerBridge.append("▷ [Voxy] No usable Kopper Zink backend was found; keeping ${targetRenderer.displayName}")
+                }
 
                 if (targetRenderer.isPlugin && !targetRenderer.pluginNativePath.isNullOrBlank()) {
                     ldLibraryPath = "${targetRenderer.pluginNativePath}:$ldLibraryPath"
