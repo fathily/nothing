@@ -13,6 +13,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -96,20 +98,22 @@ class MainActivity : ComponentActivity() {
                     if (showCreatorNotice) {
                         androidx.compose.material3.AlertDialog(
                             onDismissRequest = { showCreatorNotice = false },
-                            containerColor = androidx.compose.ui.graphics.Color.White,
-                            titleContentColor = androidx.compose.ui.graphics.Color.Black,
-                            textContentColor = androidx.compose.ui.graphics.Color.Black,
+                            shape = RoundedCornerShape(20.dp),
+                            containerColor = NuxColors.SurfaceElevated,
+                            titleContentColor = NuxColors.TextPrimary,
+                            textContentColor = NuxColors.GrayNeutral,
                             title = {
                                 androidx.compose.material3.Text(
-                                    "AlfaaBEJIRR",
-                                    color = androidx.compose.ui.graphics.Color.Black
+                                    "ALFAA • NUX",
+                                    color = NuxColors.MintGreen,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Black
                                 )
                             },
                             text = {
                                 androidx.compose.material3.Text(
                                     "Launcher ini dibuat/remake oleh AlfaaBEJIRR.\n\n" +
                                         "Mode Guest aktif untuk fork ini. Profil lokal dapat diubah tanpa login NUX.",
-                                    color = androidx.compose.ui.graphics.Color.Black
+                                    color = NuxColors.GrayNeutral
                                 )
                             },
                             confirmButton = {
@@ -118,7 +122,8 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     androidx.compose.material3.Text(
                                         "MENGERTI",
-                                        color = androidx.compose.ui.graphics.Color.Black
+                                        color = NuxColors.MintGreen,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Black
                                     )
                                 }
                             }
