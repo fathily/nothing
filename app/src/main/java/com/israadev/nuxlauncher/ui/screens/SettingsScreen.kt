@@ -203,6 +203,10 @@ fun SettingsScreen(
     var mouseSizeDp by remember(currentSettings.mouseSizeDp) { mutableIntStateOf(currentSettings.mouseSizeDp) }
 
     var resolutionRatio by remember(currentSettings.resolutionRatio) { mutableIntStateOf(currentSettings.resolutionRatio) }
+    var gameResolutionMode by remember(currentSettings.gameResolutionMode) { mutableStateOf(currentSettings.gameResolutionMode) }
+    var customResolutionWidth by remember(currentSettings.customResolutionWidth) { mutableIntStateOf(currentSettings.customResolutionWidth) }
+    var customResolutionHeight by remember(currentSettings.customResolutionHeight) { mutableIntStateOf(currentSettings.customResolutionHeight) }
+    var showResolutionDialog by remember { mutableStateOf(false) }
     var autoOptimizeMC by remember(currentSettings.autoOptimizeMinecraft) { mutableStateOf(currentSettings.autoOptimizeMinecraft) }
     var sustainedPerf by remember(currentSettings.sustainedPerformanceMode) { mutableStateOf(currentSettings.sustainedPerformanceMode) }
     var selectedRenderer by remember(currentSettings.selectedRenderer) { mutableStateOf(currentSettings.selectedRenderer) }
@@ -228,6 +232,9 @@ fun SettingsScreen(
             captureSensitivity = captureSensitivity,
             mouseSizeDp = mouseSizeDp,
             resolutionRatio = resolutionRatio,
+            gameResolutionMode = gameResolutionMode,
+            customResolutionWidth = customResolutionWidth.coerceIn(320, 3840),
+            customResolutionHeight = customResolutionHeight.coerceIn(240, 2160),
             autoOptimizeMinecraft = autoOptimizeMC,
             sustainedPerformanceMode = sustainedPerf,
             selectedRenderer = selectedRenderer,
@@ -1129,66 +1136,40 @@ fun SettingsScreen(
                             )
                         }
 
-                        // Resolution Scaling
+                        // Game Resolution + native render scaling
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(NuxColors.SurfaceInput, RoundedCornerShape(6.dp))
-                                .border(1.dp, NuxColors.CardBorder, RoundedCornerShape(6.dp))
-                                .padding(10.dp)
+                            modifier = Modifier.fillMaxWidth().background(NuxColors.SurfaceInput, RoundedCornerShape(6.dp)).border(1.dp, NuxColors.CardBorder, RoundedCornerShape(6.dp)).padding(10.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Skala Resolusi Layar",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "$resolutionRatio%",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = NuxColors.MintGreen
-                                )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Resolusi Game Minecraft", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text("Atur framebuffer: Native, 1920×1080, 4:3, MCSX, atau Custom.", fontSize = 9.5.sp, color = NuxColors.GrayNeutral)
+                                }
+                                Box(Modifier.height(28.dp).clip(RoundedCornerShape(5.dp)).background(NuxColors.ForestGreen.copy(alpha = 0.18f)).border(1.dp, NuxColors.MintGreen.copy(alpha = 0.45f), RoundedCornerShape(5.dp)).clickable { showResolutionDialog = true }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                                    Text("GANTI", fontSize = 9.5.sp, fontWeight = FontWeight.Black, color = NuxColors.MintGreen)
+                                }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(Modifier.height(7.dp))
+                            val resolutionLabel = when (gameResolutionMode) {
+                                "1920x1080" -> "1920 × 1080"
+                                "4:3" -> "4:3 (fit device)"
+                                "MCSX" -> "MCSX (1280 × 960)"
+                                "CUSTOM" -> "Custom (${customResolutionWidth} × ${customResolutionHeight})"
+                                else -> "Native (${resolutionRatio}%)"
+                            }
+                            Text(resolutionLabel, fontSize = 10.5.sp, fontWeight = FontWeight.Black, color = NuxColors.MintGreen)
+                            Spacer(Modifier.height(7.dp))
+                            Text("Skala Native / Render", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = NuxColors.GrayNeutral)
+                            Spacer(Modifier.height(3.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf(50, 75, 100, 125).forEach { ratio ->
-                                    val isSelected = resolutionRatio == ratio
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(24.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(
-                                                if (isSelected) NuxColors.ForestGreen else NuxColors.SurfaceElevated,
-                                                RoundedCornerShape(4.dp)
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (isSelected) NuxColors.MintGreen else NuxColors.CardBorder,
-                                                RoundedCornerShape(4.dp)
-                                            )
-                                            .clickable {
-                                                resolutionRatio = ratio
-                                                commitSettings()
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "$ratio%",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) Color.White else NuxColors.GrayNeutral
-                                        )
+                                    val isSelected = resolutionRatio == ratio && gameResolutionMode == "NATIVE"
+                                    Box(Modifier.weight(1f).height(24.dp).clip(RoundedCornerShape(4.dp)).background(if (isSelected) NuxColors.ForestGreen else NuxColors.SurfaceElevated).border(1.dp, if (isSelected) NuxColors.MintGreen else NuxColors.CardBorder, RoundedCornerShape(4.dp)).clickable { resolutionRatio = ratio; gameResolutionMode = "NATIVE"; commitSettings() }, contentAlignment = Alignment.Center) {
+                                        Text("$ratio%", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else NuxColors.GrayNeutral)
                                     }
                                 }
                             }
                         }
-
                         // Driver Vulkan Selector
                         Column(
                             modifier = Modifier
@@ -2291,7 +2272,42 @@ fun SettingsScreen(
             )
         }
 
-        // Renderer Selection Dialog (Landscape Optimized with NuxDialog)
+        // Game resolution selector
+    if (showResolutionDialog) {
+        Dialog(onDismissRequest = { showResolutionDialog = false }) {
+            NuxCard(Modifier.width(390.dp).fillMaxHeight(0.82f), backgroundColor = NuxColors.SurfaceElevated, shadowOffset = 6.dp, cornerRadius = 16.dp) {
+                Column(Modifier.fillMaxSize().padding(18.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("RESOLUSI GAME", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color.White)
+                            Text("Pilih framebuffer Minecraft saat game berjalan.", fontSize = 9.5.sp, color = NuxColors.GrayNeutral)
+                        }
+                        IconButton(onClick = { showResolutionDialog = false }) { Icon(Icons.Filled.Close, contentDescription = "Tutup", tint = NuxColors.Coral) }
+                    }
+                    val modes = listOf("NATIVE" to "Native", "1920x1080" to "1920 × 1080", "4:3" to "4:3 (best fit for device)", "MCSX" to "MCSX (1280 × 960)", "CUSTOM" to "Custom…")
+                    modes.forEach { (id, label) ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (gameResolutionMode == id) NuxColors.ForestGreen.copy(alpha = 0.18f) else NuxColors.SurfaceInput).border(1.dp, if (gameResolutionMode == id) NuxColors.MintGreen else NuxColors.CardBorder, RoundedCornerShape(10.dp)).clickable { gameResolutionMode = id }, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 11.dp)) {
+                                Text(label, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(when (id) { "NATIVE" -> "Mengikuti layar + skala Native"; "1920x1080" -> "16:9 fixed"; "4:3" -> "1440 × 1080"; "MCSX" -> "1280 × 960"; else -> "Masukkan ukuran sendiri" }, fontSize = 8.5.sp, color = NuxColors.GrayNeutral)
+                            }
+                            Box(Modifier.size(18.dp).border(2.dp, if (gameResolutionMode == id) NuxColors.MintGreen else NuxColors.GrayNeutral, CircleShape).padding(4.dp).background(if (gameResolutionMode == id) NuxColors.MintGreen else Color.Transparent, CircleShape))
+                            Spacer(Modifier.width(14.dp))
+                        }
+                    }
+                    if (gameResolutionMode == "CUSTOM") {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) { Text("WIDTH", fontSize = 9.sp, color = NuxColors.GrayNeutral, fontWeight = FontWeight.Bold); NuxTextField(value = customResolutionWidth.toString(), onValueChange = { customResolutionWidth = it.filter(Char::isDigit).toIntOrNull()?.coerceIn(320, 3840) ?: customResolutionWidth }, placeholder = "1280") }
+                            Column(Modifier.weight(1f)) { Text("HEIGHT", fontSize = 9.sp, color = NuxColors.GrayNeutral, fontWeight = FontWeight.Bold); NuxTextField(value = customResolutionHeight.toString(), onValueChange = { customResolutionHeight = it.filter(Char::isDigit).toIntOrNull()?.coerceIn(240, 2160) ?: customResolutionHeight }, placeholder = "720") }
+                        }
+                    }
+                    NuxButton(onClick = { commitSettings(); showResolutionDialog = false }, modifier = Modifier.fillMaxWidth().height(42.dp), backgroundColor = NuxColors.ForestGreen, contentColor = Color.White, cornerRadius = 8.dp) { Text("TERAPKAN RESOLUSI", fontWeight = FontWeight.Black, fontSize = 11.sp) }
+                    Text("Perubahan diterapkan saat Minecraft dijalankan ulang.", fontSize = 8.5.sp, color = NuxColors.GrayNeutral)
+                }
+            }
+        }
+    }
+    // Renderer Selection Dialog (Landscape Optimized with NuxDialog)
         if (showRendererDialog) {
             LaunchedEffect(Unit) {
                 NuxRendererPluginManager.scanPlugins(context)
