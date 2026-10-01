@@ -1089,7 +1089,7 @@ fun GameScreen(
                     val h = launcherSettings.customResolutionHeight.coerceAtLeast(1)
                     w.toFloat() / h.toFloat()
                 }
-                else -> launcherSettings.resolutionRatio.coerceIn(0.25f, 4f)
+                // Native keeps the device/window aspect ratio; resolutionRatio only\n            // changes pixel density and must never be treated as an aspect ratio.\n            else -> if (screenHeight > 0f) screenWidth / screenHeight else 16f / 9f
             }
         }
 
