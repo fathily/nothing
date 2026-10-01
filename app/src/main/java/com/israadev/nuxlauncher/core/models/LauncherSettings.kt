@@ -18,7 +18,10 @@ data class LauncherSettings(
     val hideMouseInClickMode: Boolean = true,
 
     // Graphics & Performance
-    val resolutionRatio: Int = 100, // 50% - 125%
+    val resolutionRatio: Int = 100, // Legacy/native render scaling: 50% - 125%
+    val gameResolutionMode: String = "NATIVE", // NATIVE, 1920x1080, 4:3, MCSX, CUSTOM
+    val customResolutionWidth: Int = 1280,
+    val customResolutionHeight: Int = 720,
     val autoOptimizeMinecraft: Boolean = true,
     val sustainedPerformanceMode: Boolean = false,
     val selectedRenderer: String = "auto", // "auto", "krypton", "mobileglues", "gl4es", "zink", "freedreno", "virgl", "panfrost"
