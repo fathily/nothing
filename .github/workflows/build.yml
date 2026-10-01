@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest build for the branch. Rapid UI/performance commits
+# should not leave a pile of redundant APK builds running in parallel.
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build Debug APK
