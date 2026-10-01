@@ -69,7 +69,6 @@ class MainActivity : ComponentActivity() {
         SettingsManager.init(this)
         com.israadev.nuxlauncher.core.controls.ControlLayoutManager.init(this)
         com.israadev.nuxlauncher.core.renderer.NuxRendererPluginManager.scanPlugins(this)
-        com.israadev.nuxlauncher.core.social.NuxVoiceManager.init(this)
         com.israadev.nuxlauncher.core.crash.CrashManager.checkAndNotify(this)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
