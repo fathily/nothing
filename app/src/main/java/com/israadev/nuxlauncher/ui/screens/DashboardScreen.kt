@@ -1,5 +1,6 @@
 package com.israadev.nuxlauncher.ui.screens
 
+import android.app.ActivityManager
 import android.widget.Toast
 import java.io.File
 import androidx.compose.foundation.Image
@@ -65,6 +66,12 @@ fun DashboardScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Video hero is expensive on memory-constrained devices. Keep a static image there.
+    val lowEndDevice = remember {
+        val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as ActivityManager
+        am.isLowRamDevice || am.memoryClass <= 2048
+    }
+
     var currentTab by remember { mutableStateOf("home") }
 
     val activeCrash by CrashManager.activeCrash.collectAsState()
@@ -85,6 +92,8 @@ fun DashboardScreen() {
 
     // Auto check update every time launcher is opened
     LaunchedEffect(Unit) {
+        // Let the first frame render before doing the network check.
+        kotlinx.coroutines.delay(1200)
         val result = UpdateManager.checkForUpdate(context)
         result.onSuccess { info ->
             if (info.isUpdateAvailable) {
