@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.israadev.nuxlauncher.core.controls.ControlLayoutManager
 import com.israadev.nuxlauncher.core.controls.KeycodeCatalog
 import com.israadev.nuxlauncher.core.controls.models.CustomControlButton
