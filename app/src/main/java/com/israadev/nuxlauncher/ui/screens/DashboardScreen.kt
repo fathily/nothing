@@ -54,6 +54,7 @@ import com.israadev.nuxlauncher.ui.dialogs.NuxDownloadProgressDialog
 import com.israadev.nuxlauncher.ui.dialogs.NuxUpdateDialog
 import com.israadev.nuxlauncher.core.update.AndroidUpdateInfo
 import com.israadev.nuxlauncher.core.update.UpdateManager
+import com.israadev.nuxlauncher.core.social.NuxVoiceManager
 import com.israadev.nuxlauncher.core.mods.NuxAddonImportManager
 import com.israadev.nuxlauncher.ui.dialogs.NuxAddonImportDialog
 import com.israadev.nuxlauncher.ui.theme.NuxColors
@@ -91,6 +92,12 @@ fun DashboardScreen() {
     val pendingImport by NuxAddonImportManager.pendingImport.collectAsState()
 
     // Auto check update every time launcher is opened
+    LaunchedEffect(currentTab) {
+        if (currentTab == "friends") {
+            NuxVoiceManager.init(context)
+        }
+    }
+
     LaunchedEffect(Unit) {
         // Let the first frame render before doing the network check.
         kotlinx.coroutines.delay(1200)
