@@ -767,18 +767,53 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     Os.setenv("RES_OPTIONS", "retrans:1 retry:1 timeout:2", true)
                 } catch (_: Throwable) {}
 
-                // Pre-dlopen libraries
+                // Pre-dlopen Java runtime libraries.
+                // Some Android JRE bundles use lib/aarch64/jli + lib/aarch64/server
+                // instead of the standard lib/jli + lib/server layout.
                 val javaLibDir = File(runtimeHome, "lib")
-                val jliLibDir = File(runtimeHome, "lib/jli")
-                val jvmLibDir = File(runtimeHome, "lib/server")
+                val runtimeSoFiles = runtimeHome.walkTopDown()
+                    .filter { it.isFile && it.name.endsWith(".so") }
+                    .toList()
 
-                val jliFile = if (File(jliLibDir, "libjli.so").exists()) File(jliLibDir, "libjli.so") else File(javaLibDir, "libjli.so")
-                ZLBridge.dlopen(jliFile.absolutePath)
-                ZLBridge.dlopen(File(jvmLibDir, "libjvm.so").absolutePath)
-                ZLBridge.dlopen(File(javaLibDir, "libverify.so").absolutePath)
-                ZLBridge.dlopen(File(javaLibDir, "libjava.so").absolutePath)
-                ZLBridge.dlopen(File(javaLibDir, "libnet.so").absolutePath)
-                ZLBridge.dlopen(File(javaLibDir, "libnio.so").absolutePath)
+                val jliFile = runtimeSoFiles.firstOrNull { it.name == "libjli.so" }
+                val jvmFile = runtimeSoFiles.firstOrNull { it.name == "libjvm.so" }
+
+                if (jliFile != null) {
+                    ZLBridge.dlopen(jliFile.absolutePath)
+                    LoggerBridge.append("▷ [Pre-dlopen] Loaded libjli.so from ${jliFile.parent}")
+                } else {
+                    LoggerBridge.append("▷ [Pre-dlopen Warning] libjli.so not found under ${runtimeHome.absolutePath}")
+                }
+
+                if (jvmFile != null) {
+                    ZLBridge.dlopen(jvmFile.absolutePath)
+                    LoggerBridge.append("▷ [Pre-dlopen] Loaded libjvm.so from ${jvmFile.parent}")
+                } else {
+                    LoggerBridge.append("▷ [Pre-dlopen Warning] libjvm.so not found under ${runtimeHome.absolutePath}")
+                }
+
+                // Load the remaining runtime libraries that exist in this JRE layout.
+                runtimeSoFiles
+                    .filter { it.name in setOf("libverify.so", "libjava.so", "libnet.so", "libnio.so") }
+                    .forEach { so ->
+                        try {
+                            ZLBridge.dlopen(so.absolutePath)
+                            LoggerBridge.append("▷ [Pre-dlopen] Loaded ${so.name}")
+                        } catch (e: Throwable) {
+                            LoggerBridge.append("▷ [Pre-dlopen Warning] ${so.name}: ${e.message}")
+                        }
+                    }
+
+                // Make every runtime native-library directory visible to the JVM launcher.
+                runtimeSoFiles
+                    .mapNotNull { it.parentFile?.absolutePath }
+                    .distinct()
+                    .forEach { dir ->
+                        if (!ldLibraryPath.split(File.pathSeparator).contains(dir)) {
+                            ldLibraryPath = "$dir${File.pathSeparator}$ldLibraryPath"
+                        }
+                    }
+                ZLBridge.setLdLibraryPath(ldLibraryPath)
 
                 // Pre-dlopen internal renderer ONLY if NOT a plugin (prevents overriding plugin libraries with internal ones)
                 if (!targetRenderer.isPlugin) {
