@@ -26,8 +26,12 @@ object NuxConfig {
     val LIVEKIT_TOKEN_URL: String
         get() = if (isConfigured) "$SERVER_BASE_URL/livekit/token" else ""
 
+    /** NUX backend update endpoint, with official NUX GitHub Releases as public-fork fallback. */
     val UPDATE_ENDPOINT: String
-        get() = if (isConfigured) "$SERVER_BASE_URL/getAndroidVersion" else ""
+        get() = if (isConfigured) "$SERVER_BASE_URL/getAndroidVersion" else OFFICIAL_UPDATE_ENDPOINT
+
+    const val OFFICIAL_UPDATE_ENDPOINT =
+        "https://api.github.com/repos/IsraaDeveloper/nuxlabs/releases/latest"
 
     val BUY_KEY_URL: String
         get() = if (isConfigured) "$SERVER_BASE_URL/android-key" else ""
