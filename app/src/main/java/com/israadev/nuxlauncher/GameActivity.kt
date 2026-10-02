@@ -238,7 +238,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
             "4:3" -> {
                 // Fit a 4:3 base resolution to the device's current height.
                 val height = displayHeight
-                (height * 4 / 3).roundToInt().coerceAtLeast(320) to height.coerceAtLeast(240)
+                (height * 4 / 3).coerceAtLeast(320) to height.coerceAtLeast(240)
             }
             "MCSX" -> 1280 to 960
             "CUSTOM" -> {
