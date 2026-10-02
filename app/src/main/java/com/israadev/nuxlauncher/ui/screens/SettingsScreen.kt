@@ -250,6 +250,12 @@ fun SettingsScreen(
         SettingsManager.updateSettings(context, updated)
     }
 
+    // Persist any in-progress local edits when leaving Settings, without writing to disk
+    // on every slider frame or every text keystroke.
+    DisposableEffect(Unit) {
+        onDispose { commitSettings() }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -915,8 +921,8 @@ fun SettingsScreen(
                                 value = ramMb.toFloat(),
                                 onValueChange = {
                                     ramMb = ((it / 128).roundToInt() * 128).coerceIn(512, maxAllocatableRam)
-                                    commitSettings()
                                 },
+                                onValueChangeFinished = { commitSettings() },
                                 valueRange = 512f..maxAllocatableRam.toFloat(),
                                 steps = ((maxAllocatableRam - 512) / 128) - 1,
                                 colors = SliderDefaults.colors(
@@ -986,10 +992,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             NuxTextField(
                                 value = customJvmArgs,
-                                onValueChange = {
-                                    customJvmArgs = it
-                                    commitSettings()
-                                },
+                                onValueChange = { customJvmArgs = it },
                                 placeholder = "Contoh: -XX:+UseG1GC -Dminecraft.applet.TargetDirectory=..."
                             )
                         }
@@ -1587,10 +1590,8 @@ fun SettingsScreen(
                             }
                             Slider(
                                 value = captureSensitivity.toFloat(),
-                                onValueChange = {
-                                    captureSensitivity = it.roundToInt()
-                                    commitSettings()
-                                },
+                                onValueChange = { captureSensitivity = it.roundToInt() },
+                                onValueChangeFinished = { commitSettings() },
                                 valueRange = 50f..300f,
                                 steps = 25,
                                 colors = SliderDefaults.colors(
@@ -1636,10 +1637,8 @@ fun SettingsScreen(
                             }
                             Slider(
                                 value = cursorSensitivity.toFloat(),
-                                onValueChange = {
-                                    cursorSensitivity = it.roundToInt()
-                                    commitSettings()
-                                },
+                                onValueChange = { cursorSensitivity = it.roundToInt() },
+                                onValueChangeFinished = { commitSettings() },
                                 valueRange = 50f..300f,
                                 steps = 25,
                                 colors = SliderDefaults.colors(
@@ -1678,10 +1677,8 @@ fun SettingsScreen(
                             }
                             Slider(
                                 value = mouseSizeDp.toFloat(),
-                                onValueChange = {
-                                    mouseSizeDp = it.roundToInt()
-                                    commitSettings()
-                                },
+                                onValueChange = { mouseSizeDp = it.roundToInt() },
+                                onValueChangeFinished = { commitSettings() },
                                 valueRange = 16f..48f,
                                 steps = 16,
                                 colors = SliderDefaults.colors(
