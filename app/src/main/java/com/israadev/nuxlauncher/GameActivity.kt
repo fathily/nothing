@@ -230,29 +230,50 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
         val displayWidth = resources.displayMetrics.widthPixels.coerceAtLeast(1)
         val displayHeight = resources.displayMetrics.heightPixels.coerceAtLeast(1)
 
-        return when (settings.gameResolutionMode.uppercase()) {
+        // The selected mode defines the base/output resolution.
+        // resolutionRatio is the internal Minecraft render scale and applies
+        // consistently to Native, 1920x1080, 4:3, MCSX and Custom.
+        val (baseWidth, baseHeight) = when (settings.gameResolutionMode.uppercase()) {
             "1920X1080" -> 1920 to 1080
             "4:3" -> {
-                // Keep the current display height and derive a 4:3 framebuffer.
+                // Fit a 4:3 base resolution to the device's current height.
                 val height = displayHeight
-                (height * 4 / 3).coerceAtLeast(320) to height.coerceAtLeast(240)
+                (height * 4 / 3).roundToInt().coerceAtLeast(320) to height.coerceAtLeast(240)
             }
             "MCSX" -> 1280 to 960
-            "CUSTOM" -> settings.customResolutionWidth.coerceIn(320, 3840) to settings.customResolutionHeight.coerceIn(240, 2160)
+            "CUSTOM" -> {
+                settings.customResolutionWidth.coerceIn(320, 3840) to
+                    settings.customResolutionHeight.coerceIn(240, 2160)
+            }
             else -> {
-                val totalRamMb = SettingsManager.getTotalDeviceMemoryMb(this)
-                val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
-                val userRatio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.25f)
-                val autoRatio = when {
-                    !settings.autoOptimizeMinecraft -> 1.0f
-                    totalRamMb <= 4096 -> 0.75f
-                    totalRamMb <= 6144 || lowEnd -> 0.85f
-                    else -> 1.0f
-                }
-                val ratio = if (settings.autoOptimizeMinecraft) minOf(userRatio, autoRatio) else userRatio
-                (displayWidth * ratio).roundToInt().coerceAtLeast(320) to (displayHeight * ratio).roundToInt().coerceAtLeast(240)
+                // Native follows the physical device/window resolution.
+                displayWidth to displayHeight
             }
         }
+
+        val userRatio = (settings.resolutionRatio / 100f).coerceIn(0.5f, 1.25f)
+
+        // Auto optimization can still cap Native rendering on lower-end devices.
+        // Explicit resolution modes always respect the user's chosen scale.
+        val effectiveRatio = if (settings.gameResolutionMode.equals("NATIVE", ignoreCase = true)) {
+            val totalRamMb = SettingsManager.getTotalDeviceMemoryMb(this)
+            val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
+            val autoRatio = when {
+                !settings.autoOptimizeMinecraft -> 1.0f
+                totalRamMb <= 4096 -> 0.75f
+                totalRamMb <= 6144 || lowEnd -> 0.85f
+                else -> 1.0f
+            }
+            if (settings.autoOptimizeMinecraft) minOf(userRatio, autoRatio) else userRatio
+        } else {
+            userRatio
+        }
+
+        return (
+            baseWidth * effectiveRatio
+        ).roundToInt().coerceAtLeast(320) to (
+            baseHeight * effectiveRatio
+        ).roundToInt().coerceAtLeast(240)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
