@@ -4,6 +4,7 @@ import android.content.Context
 import com.israadev.nuxlauncher.core.crash.CrashManager
 import com.israadev.nuxlauncher.core.renderer.NuxRendererRegistry
 import com.israadev.nuxlauncher.ui.activities.ErrorActivity
+import com.israadev.nuxlauncher.ui.components.GameLoadingOverlay
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -17,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -120,6 +122,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
     private var isGameStarted = false
     private var surfaceHolderRef: SurfaceHolder? = null
     private val isControlVisibleState = mutableStateOf(true)
+    private val isGameRenderingState = mutableStateOf(false)
 
     private var isManualExit = false
     private var sessionStartTime = System.currentTimeMillis()
@@ -333,9 +336,10 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
             }
         }
 
-        // Setup Graphic Output Listener
+        // Setup Graphic Output Listener (Mendeteksi Logo Mojang mulai dirender)
         CallbackBridge.setGraphicOutputListener {
             runOnUiThread {
+                isGameRenderingState.value = true
                 liveLogs.add("🎨 [Render Engine] First graphical frame rendered on Surface!")
                 val midX = (CallbackBridge.windowWidth.takeIf { it > 0 } ?: 1280) / 2f
                 val midY = (CallbackBridge.windowHeight.takeIf { it > 0 } ?: 720) / 2f
@@ -353,6 +357,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     runtimeName = runtimeName,
                     liveLogs = liveLogs,
                     isControlVisibleState = isControlVisibleState,
+                    isGameRenderingState = isGameRenderingState,
                     onSurfaceReady = { surfaceHolder ->
                         surfaceHolderRef = surfaceHolder
                         val (targetWidth, targetHeight) = getScaledDisplayDimensions()
@@ -380,6 +385,15 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 liveLogs.add(text)
                 if (liveLogs.size > 200) {
                     liveLogs.removeAt(0)
+                }
+                // Deteksi sekunder jika frame grafik atau sistem audio game mulai aktif
+                if (!isGameRenderingState.value) {
+                    if (text.contains("OpenAL initialized") || 
+                        text.contains("Reloading ResourceManager") || 
+                        text.contains("Sound engine started") ||
+                        text.contains("Setting user: ")) {
+                        isGameRenderingState.value = true
+                    }
                 }
             }
         }
@@ -809,6 +823,17 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     Os.setenv(k, v, true)
                 }
 
+                // Apply Renderer V2 Environment Variables (persis Zalith fclPlugin_V2 & MobileGlues)
+                try {
+                    val v2Envs = com.israadev.nuxlauncher.core.renderer.v2.NuxRendererV2Manager.getEffectiveEnv(targetRenderer)
+                    v2Envs.forEach { (k, v) ->
+                        Os.setenv(k, v, true)
+                        LoggerBridge.append("▷ [Renderer V2 Env] $k = $v")
+                    }
+                } catch (e: Exception) {
+                    LoggerBridge.append("▷ [Renderer V2 Env Warning] Gagal menginjeksi V2 env: ${e.message}")
+                }
+
                 // Apply EGL specific library path if specified (full absolute path for plugins)
                 val eglPath = if (!targetRenderer.eglName.isNullOrBlank()) {
                     val rawEgl = targetRenderer.eglName!!
@@ -888,9 +913,10 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 Os.setenv("JAVA_HOME", runtimeHome.absolutePath, true)
                 Os.setenv("HOME", gameDir.absolutePath, true)
                 Os.setenv("TMPDIR", cacheDir.absolutePath, true)
-                Os.setenv("LD_LIBRARY_PATH", ldLibraryPath, true)
-                Os.setenv("AWTSTUB_WIDTH", "${resources.displayMetrics.widthPixels}", true)
-                Os.setenv("AWTSTUB_HEIGHT", "${resources.displayMetrics.heightPixels}", true)
+                Os.setenv("PATH", "${runtimeHome.absolutePath}/bin:" + (Os.getenv("PATH") ?: "/system/bin"), true)
+                Os.setenv("LD_LIBRARY_PATH", gameLdLibraryPath, true)
+                Os.setenv("AWTSTUB_WIDTH", "$targetWidth", true)
+                Os.setenv("AWTSTUB_HEIGHT", "$targetHeight", true)
                 Os.setenv("ALSOFT_DRIVERS", "opensl", true)
 
                 // Android DNS Resolver Setup (Matches Zalith & Pojav for SRV record resolution)
@@ -1061,11 +1087,14 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     "libspirv-cross-c-shared.so"
                 }
 
+                // Pastikan permission executable (0755) pada bin/java dan runtime native libraries
+                com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.ensureExecutablePermissions(runtimeHome)
+
                 val jvmArgs = mutableListOf<String>()
                 jvmArgs.add("${runtimeHome.absolutePath}/bin/java")
                 jvmArgs.add("-Djava.home=${runtimeHome.absolutePath}")
                 jvmArgs.add("-Djava.io.tmpdir=${cacheDir.absolutePath}")
-                jvmArgs.add("-Djava.library.path=$ldLibraryPath")
+                jvmArgs.add("-Djava.library.path=$gameLdLibraryPath")
                 jvmArgs.add("-Dorg.lwjgl.librarypath=$effectiveLwjglDir")
                 jvmArgs.add("-Dorg.lwjgl.opengl.libname=$glLibPath")
                 jvmArgs.add("-Dorg.lwjgl.openal.libname=$nativeLibDir/libopenal.so")
@@ -1181,8 +1210,21 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     }
                 }
 
+                // Sanitasi classpath: buang duplikat dan pastikan tidak ada bentrok versi ASM jika menjalankan Fabric/Knot
+                val effectiveClasspath = if (mainClass.contains("knot") || mainClass.contains("fabric")) {
+                    val entries = classpath.split(File.pathSeparator).filter { it.isNotBlank() }
+                    val hasModernAsm = entries.any { it.contains("org/ow2/asm") && !it.contains("/9.6/") }
+                    if (hasModernAsm) {
+                        entries.filterNot { it.contains("org/ow2/asm") && it.contains("/9.6/") }
+                    } else {
+                        entries
+                    }.distinct().joinToString(File.pathSeparator)
+                } else {
+                    classpath.split(File.pathSeparator).filter { it.isNotBlank() }.distinct().joinToString(File.pathSeparator)
+                }
+
                 jvmArgs.add("-cp")
-                jvmArgs.add(classpath)
+                jvmArgs.add(effectiveClasspath)
                 if (useWrapper) {
                     jvmArgs.add("mio.Wrapper")
                 }
@@ -1231,6 +1273,12 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
     }
 }
 
+enum class FpsMode {
+    NORMAL,    // Siklus 3 / Awal: Mengikuti visibilitas GUI (isControlVisible), log tertutup
+    PINNED,    // Siklus 1: FPS di-pin, tetap tampil meski GUI di-hide, log tertutup
+    SHOW_LOG   // Siklus 2: Memunculkan log in-game (isConsoleVisible = true)
+}
+
 @Composable
 fun GameScreen(
     instanceName: String,
@@ -1240,17 +1288,44 @@ fun GameScreen(
     runtimeName: String,
     liveLogs: List<String>,
     isControlVisibleState: MutableState<Boolean>,
+    isGameRenderingState: MutableState<Boolean>,
     onSurfaceReady: (SurfaceHolder) -> Unit,
     onExit: () -> Unit
 ) {
     var isControlVisible by isControlVisibleState
+    var isGameRendering by isGameRenderingState
+    var isManualLoadingDismissed by remember { mutableStateOf(false) }
+    val showLoadingOverlay = !isGameRendering && !isManualLoadingDismissed
+
     var isKeyboardRequested by remember { mutableStateOf(false) }
     var isConsoleVisible by remember { mutableStateOf(false) }
     var isConsoleExpanded by remember { mutableStateOf(false) }
     var showExitConfirmDialog by remember { mutableStateOf(false) }
     var currentFps by remember { mutableIntStateOf(0) }
+    var fpsMode by remember { mutableStateOf(FpsMode.NORMAL) }
     val listState = rememberLazyListState()
     val context = LocalContext.current
+
+    // Handler siklus 3-klik tombol FPS
+    val cycleFpsMode: () -> Unit = {
+        when (fpsMode) {
+            FpsMode.NORMAL -> {
+                fpsMode = FpsMode.PINNED
+                isConsoleVisible = false
+                Toast.makeText(context, "📌 FPS Di-Pin (Tetap tampil saat GUI disembunyikan)", Toast.LENGTH_SHORT).show()
+            }
+            FpsMode.PINNED -> {
+                fpsMode = FpsMode.SHOW_LOG
+                isConsoleVisible = true
+                Toast.makeText(context, "📜 Menampilkan Live Log Minecraft", Toast.LENGTH_SHORT).show()
+            }
+            FpsMode.SHOW_LOG -> {
+                fpsMode = FpsMode.NORMAL
+                isConsoleVisible = false
+                Toast.makeText(context, "FPS Mode Normal (Mengikuti visibilitas GUI)", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Periodically update FPS counter from native engine
     LaunchedEffect(Unit) {
@@ -1412,6 +1487,20 @@ fun GameScreen(
             }
         )
 
+        // 2b. Game Loading Screen Overlay with Launcher Tips (Muncul sebelum logo Mojang)
+        GameLoadingOverlay(
+            visible = showLoadingOverlay,
+            instanceName = instanceName,
+            mcVersion = mcVersion,
+            latestLog = liveLogs.lastOrNull() ?: "",
+            onClose = { isManualLoadingDismissed = true },
+            onViewLog = {
+                fpsMode = FpsMode.SHOW_LOG
+                isConsoleVisible = true
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
         // Hidden IME soft keyboard layer
         if (isKeyboardRequested) {
             HidableInputLayout(
@@ -1453,9 +1542,9 @@ fun GameScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Clickable FPS badge to hide log
+                    // Clickable FPS badge in console (Klik ke-3 untuk kembali normal)
                     Box(
-                        modifier = Modifier.clickable { isConsoleVisible = false }
+                        modifier = Modifier.clickable { cycleFpsMode() }
                     ) {
                         NuxBadge(
                             text = if (currentFps > 0) "$currentFps FPS" else "FPS: --",
@@ -1484,7 +1573,10 @@ fun GameScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clickable { isConsoleVisible = false }
+                                .clickable {
+                                    isConsoleVisible = false
+                                    fpsMode = FpsMode.NORMAL
+                                }
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -1550,22 +1642,44 @@ fun GameScreen(
             if (btn.isSystem) {
                 when (btn.systemAction) {
                     "FPS" -> {
-                        // FPS Indicator Pill
-                        if (isControlVisible && !isConsoleVisible) {
+                        // FPS Indicator Pill (3-Mode Cycle: 1=Pin FPS, 2=Show Log, 3=Normal)
+                        val shouldShowFps = when (fpsMode) {
+                            FpsMode.NORMAL -> isControlVisible && !isConsoleVisible
+                            FpsMode.PINNED -> !isConsoleVisible // Tetap tampil meski isControlVisible == false (GUI di-hide)!
+                            FpsMode.SHOW_LOG -> false // Log console aktif (badge FPS ada di header console)
+                        }
+
+                        if (shouldShowFps) {
+                            val isPinned = fpsMode == FpsMode.PINNED
                             Box(
                                 modifier = buttonModifier
-                                    .size(width = btn.widthDp.dp, height = btn.heightDp.dp)
+                                    .wrapContentWidth()
+                                    .defaultMinSize(minWidth = btn.widthDp.dp, minHeight = btn.heightDp.dp)
                                     .alpha(btn.opacity)
-                                    .background(Color(0x800A0E17), RoundedCornerShape(btn.cornerRadiusDp.dp))
-                                    .border(1.2.dp, Color(0x3834D399), RoundedCornerShape(btn.cornerRadiusDp.dp))
-                                    .clickable { isConsoleVisible = true },
+                                    .background(
+                                        if (isPinned) Color(0xCC091E2A) else Color(0x800A0E17),
+                                        RoundedCornerShape(btn.cornerRadiusDp.dp)
+                                    )
+                                    .border(
+                                        1.5.dp,
+                                        if (isPinned) Color(0xFF38BDF8) else Color(0x3834D399),
+                                        RoundedCornerShape(btn.cornerRadiusDp.dp)
+                                    )
+                                    .clickable { cycleFpsMode() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(horizontal = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
+                                    if (isPinned) {
+                                        Text(
+                                            text = "📌",
+                                            fontSize = 9.sp,
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                    }
                                     Box(
                                         modifier = Modifier
                                             .size(7.dp)
@@ -1582,7 +1696,7 @@ fun GameScreen(
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(
                                         text = if (currentFps > 0) "$currentFps FPS" else "FPS: --",
-                                        color = Color.White,
+                                        color = if (isPinned) Color(0xFFBAE6FD) else Color.White,
                                         fontWeight = FontWeight.Black,
                                         fontSize = 11.sp,
                                         maxLines = 1
