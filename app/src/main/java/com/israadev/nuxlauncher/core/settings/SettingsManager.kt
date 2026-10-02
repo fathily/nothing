@@ -8,9 +8,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 object SettingsManager {
     private val gson = Gson()
+    // Settings changes can happen rapidly while dragging sliders/text fields.
+    // Keep disk I/O off the UI thread so Compose stays responsive on low-end phones.
+    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
     private val _settings = MutableStateFlow(LauncherSettings())
     val settings: StateFlow<LauncherSettings> = _settings.asStateFlow()
 
@@ -49,7 +56,7 @@ object SettingsManager {
 
     fun updateSettings(context: Context, newSettings: LauncherSettings) {
         _settings.value = newSettings
-        save(context)
+        saveAsync(context)
     }
 
     fun resetToDefaults(context: Context) {
@@ -62,6 +69,12 @@ object SettingsManager {
         val defaultSettings = LauncherSettings(ramMb = defaultRam)
         _settings.value = defaultSettings
         save(context)
+    }
+
+    private fun saveAsync(context: Context) {
+        saveScope.launch {
+            save(context)
+        }
     }
 
     private fun save(context: Context) {
