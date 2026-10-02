@@ -38,7 +38,18 @@ object JavaRuntimeManager {
         val home = getRuntimeHome(context, runtimeName)
         val javaBin = File(home, "bin/java")
         val releaseFile = File(home, "release")
-        return home.exists() && (javaBin.exists() || releaseFile.exists())
+
+        // A runtime is only usable when the Java executable AND native
+        // launcher libraries are present. A previous partial extraction can
+        // leave bin/java behind while libjli/libjvm are missing, which causes
+        // GameActivity to fail at JLI_Launch with "libjli.so not found".
+        val hasJli = home.walkTopDown().any { it.isFile && it.name == "libjli.so" }
+        val hasJvm = home.walkTopDown().any { it.isFile && it.name == "libjvm.so" }
+
+        return home.exists() &&
+            (javaBin.exists() || releaseFile.exists()) &&
+            hasJli &&
+            hasJvm
     }
 
     /**
