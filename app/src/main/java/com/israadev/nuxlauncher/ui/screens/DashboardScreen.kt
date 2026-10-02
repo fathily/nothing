@@ -418,14 +418,32 @@ fun DashboardScreen() {
                                                                     }
                                                                 }
                                                             } else {
-                                                                val currentRendererInfo = NuxRendererRegistry.findRendererById(launcherSettings.selectedRenderer)
-                                                                val isSupported = NuxRendererRegistry.isSupportedForVersion(currentRendererInfo, inst.mcVersion)
-                                                                if (!isSupported) {
-                                                                    unsupportedRendererInfo = currentRendererInfo
-                                                                    pendingLaunchInstance = inst
-                                                                } else {
-                                                                    Toast.makeText(context, "Meluncurkan ${inst.name}...", Toast.LENGTH_SHORT).show()
-                                                                    GameLauncher.launch(context, inst, account)
+                                                                // Validate the JRE even when the Minecraft instance itself is already downloaded.
+                                                                scope.launch {
+                                                                    val targetRuntime = JavaRuntimeManager.getRecommendedRuntime(inst.mcVersion)
+                                                                    if (!JavaRuntimeManager.isRuntimeInstalled(context, targetRuntime)) {
+                                                                        isDownloading = true
+                                                                        downloadTargetName = inst.name
+                                                                        downloadProgress = 0f
+                                                                        downloadMessage = "Memperbaiki OpenJDK (${JavaRuntimeManager.getRuntimeDisplayName(targetRuntime)})..."
+                                                                        val runtimeResult = JavaRuntimeManager.extractRuntime(context, targetRuntime) { msg ->
+                                                                            downloadMessage = msg
+                                                                        }
+                                                                        isDownloading = false
+                                                                        if (runtimeResult.isFailure) {
+                                                                            Toast.makeText(context, "Java Runtime rusak/tidak lengkap: ${runtimeResult.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+                                                                            return@launch
+                                                                        }
+                                                                    }
+                                                                    val currentRendererInfo = NuxRendererRegistry.findRendererById(launcherSettings.selectedRenderer)
+                                                                    val isSupported = NuxRendererRegistry.isSupportedForVersion(currentRendererInfo, inst.mcVersion)
+                                                                    if (!isSupported) {
+                                                                        unsupportedRendererInfo = currentRendererInfo
+                                                                        pendingLaunchInstance = inst
+                                                                    } else {
+                                                                        Toast.makeText(context, "Meluncurkan ${inst.name}...", Toast.LENGTH_SHORT).show()
+                                                                        GameLauncher.launch(context, inst, account)
+                                                                    }
                                                                 }
                                                             }
                                                         }
