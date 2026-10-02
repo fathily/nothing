@@ -515,6 +515,73 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
             }
     }
 
+    /** Temporary Android compatibility patch for Voxy desktop glibc lookup. */
+    private fun patchVoxyAndroidCompatibility(gameDir: File): File? {
+        val modsDir = File(gameDir, "mods")
+        val voxyJar = modsDir.listFiles()?.firstOrNull {
+            it.isFile && it.extension.equals("jar", true) && it.name.contains("voxy", true) &&
+                !it.name.contains("android-compat", true) && !it.name.contains("poxy", true)
+        } ?: return null
+        val backup = File(voxyJar.parentFile, "." + voxyJar.name + ".nux-android-backup")
+        try {
+            if (backup.exists()) { voxyJar.delete(); backup.copyTo(voxyJar, overwrite = true); backup.delete() }
+            val temp = File(voxyJar.parentFile, "." + voxyJar.name + ".nux-patched.tmp")
+            var patched = false
+            java.util.zip.ZipInputStream(java.io.BufferedInputStream(voxyJar.inputStream())).use { zin ->
+                java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(temp.outputStream())).use { zout ->
+                    while (true) {
+                        val entry = zin.nextEntry ?: break
+                        val data = zin.readBytes()
+                        val isThreadUtils = entry.name.endsWith("/ThreadUtils.class") || entry.name == "ThreadUtils.class"
+                        val outData = if (isThreadUtils) patchVoxyLibcConstant(data).also { if (it !== data) patched = true } else data
+                        val outEntry = java.util.zip.ZipEntry(entry.name).apply { time = entry.time; comment = entry.comment; extra = entry.extra }
+                        zout.putNextEntry(outEntry); zout.write(outData); zout.closeEntry(); zin.closeEntry()
+                    }
+                }
+            }
+            if (!patched) { temp.delete(); LoggerBridge.append("▷ [Voxy] No libc.so.6 constant found; skipping compatibility patch"); return null }
+            voxyJar.copyTo(backup, overwrite = true)
+            if (!temp.renameTo(voxyJar)) { temp.copyTo(voxyJar, overwrite = true); temp.delete() }
+            LoggerBridge.append("▷ [Voxy] Temporary Android libc compatibility patch applied")
+            return backup
+        } catch (e: Throwable) {
+            runCatching { File(voxyJar.parentFile, "." + voxyJar.name + ".nux-patched.tmp").delete() }
+            LoggerBridge.append("▷ [Voxy] Compatibility patch failed: " + e.message)
+            return null
+        }
+    }
+
+    private fun patchVoxyLibcConstant(classBytes: ByteArray): ByteArray {
+        val needle = "libc.so.6".toByteArray(Charsets.UTF_8)
+        val replacement = "libc.so".toByteArray(Charsets.UTF_8)
+        if (classBytes.size < needle.size + 2) return classBytes
+        for (i in 2..classBytes.size - needle.size) {
+            var match = true
+            for (j in needle.indices) if (classBytes[i + j] != needle[j]) { match = false; break }
+            if (!match) continue
+            val lengthOffset = i - 2
+            val length = ((classBytes[lengthOffset].toInt() and 0xFF) shl 8) or (classBytes[lengthOffset + 1].toInt() and 0xFF)
+            if (length != needle.size) continue
+            val out = ByteArray(classBytes.size - (needle.size - replacement.size))
+            System.arraycopy(classBytes, 0, out, 0, lengthOffset)
+            out[lengthOffset] = (replacement.size ushr 8).toByte(); out[lengthOffset + 1] = replacement.size.toByte()
+            System.arraycopy(replacement, 0, out, lengthOffset + 2, replacement.size)
+            val suffixStart = i + needle.size
+            System.arraycopy(classBytes, suffixStart, out, lengthOffset + 2 + replacement.size, classBytes.size - suffixStart)
+            return out
+        }
+        return classBytes
+    }
+
+    private fun restoreVoxyAndroidCompatibility(gameDir: File, backup: File?) {
+        if (backup == null || !backup.exists()) return
+        val voxyJar = File(File(gameDir, "mods"), backup.name.removePrefix(".").removeSuffix(".nux-android-backup"))
+        runCatching {
+            voxyJar.delete(); backup.renameTo(voxyJar); if (backup.exists()) backup.delete()
+            LoggerBridge.append("▷ [Voxy] Original Voxy jar restored after JVM exit")
+        }.onFailure { LoggerBridge.append("▷ [Voxy] WARNING: could not restore original Voxy jar: " + it.message) }
+    }
+
     private fun startGameJVM() {
         thread(name = "NUX-JVM-Thread") {
             try {
@@ -522,6 +589,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 val runtimeHome = File(runtimeHomePath)
                 val gameDir = File(gameDirPath)
                 val assetsDir = File(assetsDirPath)
+                val voxyBackup = patchVoxyAndroidCompatibility(gameDir)
 
                 liveLogs.add("[NUX Launcher] Menyiapkan environment JVM...")
 
@@ -1077,7 +1145,11 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
 
                 CrashManager.onGameSessionStarted(this, instanceName, mcVersion, activeSettings.selectedRenderer, gameDir.absolutePath)
                 liveLogs.add("[NUX Engine] Memulai eksekusi VMLauncher.launchJVM()...")
-                val exitCode = VMLauncher.launchJVM(jvmArgs.toTypedArray())
+                val exitCode = try {
+                    VMLauncher.launchJVM(jvmArgs.toTypedArray())
+                } finally {
+                    restoreVoxyAndroidCompatibility(gameDir, voxyBackup)
+                }
                 liveLogs.add("[NUX Engine] JVM selesai dengan kode keluar: $exitCode")
                 runOnUiThread {
                     handleGameExit(exitCode, false)
@@ -1836,4 +1908,3 @@ fun CustomVirtualButton(
         }
     }
 }
-
