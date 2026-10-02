@@ -104,15 +104,17 @@ class MainActivity : ComponentActivity() {
                             textContentColor = NuxColors.GrayNeutral,
                             title = {
                                 androidx.compose.material3.Text(
-                                    "ALFAA • NUX",
+                                    "Alfaa X NuxLauncher",
                                     color = NuxColors.MintGreen,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.Black
                                 )
                             },
                             text = {
                                 androidx.compose.material3.Text(
-                                    "Launcher ini dibuat/remake oleh AlfaaBEJIRR.\n\n" +
-                                        "Mode Guest aktif untuk fork ini. Profil lokal dapat diubah tanpa login NUX.",
+                                    "Launcher ini menambahkan sedikit fitur baru untuk pengembangan NuxLauncher yang dimodif ulang oleh Alfaa ( TikTok : @alfathgpp )\n\n" +
+                                        "Credit Launcher diberikan kepada NuxLauncher\n" +
+                                        "Site : nuxlauncher.site\n" +
+                                        "TikTok : @nux.launcher",
                                     color = NuxColors.GrayNeutral
                                 )
                             },
