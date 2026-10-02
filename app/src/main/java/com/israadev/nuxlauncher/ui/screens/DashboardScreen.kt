@@ -55,6 +55,8 @@ import com.israadev.nuxlauncher.ui.dialogs.NuxCrashDialog
 import com.israadev.nuxlauncher.ui.dialogs.NuxDeleteInstanceDialog
 import com.israadev.nuxlauncher.ui.dialogs.NuxDownloadProgressDialog
 import com.israadev.nuxlauncher.ui.dialogs.NuxUpdateDialog
+import com.israadev.nuxlauncher.ui.dialogs.NuxAboutDialog
+import com.israadev.nuxlauncher.ui.dialogs.NuxPremiumDialog
 import com.israadev.nuxlauncher.core.update.AndroidUpdateInfo
 import com.israadev.nuxlauncher.core.update.UpdateManager
 import com.israadev.nuxlauncher.core.social.NuxVoiceManager
@@ -91,8 +93,17 @@ fun DashboardScreen() {
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateDialogInfo by remember { mutableStateOf<AndroidUpdateInfo?>(null) }
     var pendingLaunchInstance by remember { mutableStateOf<com.israadev.nuxlauncher.core.models.Instance?>(null) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showPremiumDialog by remember { mutableStateOf(false) }
+    var premiumInitialPrompt by remember { mutableStateOf<String?>(null) }
+    var showEditInstanceDialog by remember { mutableStateOf(false) }
     var unsupportedRendererInfo by remember { mutableStateOf<NuxRendererInfo?>(null) }
     val pendingImport by NuxAddonImportManager.pendingImport.collectAsState()
+
+    // Open the existing Add Instance dialog from dashboard actions.
+    fun handleRequestCreateInstance() {
+        showAddDialog = true
+    }
 
     // Auto check update every time launcher is opened
     LaunchedEffect(currentTab) {
