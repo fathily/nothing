@@ -520,58 +520,123 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
     private fun patchVoxyAndroidCompatibility(gameDir: File): File? {
         val modsDir = File(gameDir, "mods")
         val voxyJar = modsDir.listFiles()?.firstOrNull {
-            it.isFile && it.extension.equals("jar", true) && it.name.contains("voxy", true) &&
-                !it.name.contains("android-compat", true) && !it.name.contains("poxy", true)
+            it.isFile && it.extension.equals("jar", true) &&
+                it.name.contains("voxy", true) &&
+                !it.name.contains("android-compat", true) &&
+                !it.name.contains("poxy", true)
         } ?: return null
+
         val backup = File(voxyJar.parentFile, "." + voxyJar.name + ".nux-android-backup")
         try {
-            if (backup.exists()) { voxyJar.delete(); backup.copyTo(voxyJar, overwrite = true); backup.delete() }
+            if (backup.exists()) {
+                voxyJar.delete()
+                backup.copyTo(voxyJar, overwrite = true)
+                backup.delete()
+            }
+
             val temp = File(voxyJar.parentFile, "." + voxyJar.name + ".nux-patched.tmp")
-            var patched = false
-            java.util.zip.ZipInputStream(java.io.BufferedInputStream(voxyJar.inputStream())).use { zin ->
-                java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(temp.outputStream())).use { zout ->
+            var patchedEntries = 0
+
+            java.util.zip.ZipInputStream(
+                java.io.BufferedInputStream(voxyJar.inputStream())
+            ).use { zin ->
+                java.util.zip.ZipOutputStream(
+                    java.io.BufferedOutputStream(temp.outputStream())
+                ).use { zout ->
                     while (true) {
                         val entry = zin.nextEntry ?: break
                         val data = zin.readBytes()
-                        val isThreadUtils = entry.name.endsWith("/ThreadUtils.class") || entry.name == "ThreadUtils.class"
-                        val outData = if (isThreadUtils) patchVoxyLibcConstant(data).also { if (it !== data) patched = true } else data
-                        val outEntry = java.util.zip.ZipEntry(entry.name).apply { time = entry.time; comment = entry.comment; extra = entry.extra }
-                        zout.putNextEntry(outEntry); zout.write(outData); zout.closeEntry(); zin.closeEntry()
+
+                        val outData = if (entry.name.endsWith(".class", true)) {
+                            patchVoxyLibcConstant(data).also {
+                                if (!it.contentEquals(data)) patchedEntries++
+                            }
+                        } else {
+                            data
+                        }
+
+                        val outEntry = java.util.zip.ZipEntry(entry.name).apply {
+                            time = entry.time
+                            comment = entry.comment
+                            extra = entry.extra
+                        }
+                        zout.putNextEntry(outEntry)
+                        zout.write(outData)
+                        zout.closeEntry()
+                        zin.closeEntry()
                     }
                 }
             }
-            if (!patched) { temp.delete(); LoggerBridge.append("▷ [Voxy] No libc.so.6 constant found; skipping compatibility patch"); return null }
+
+            if (patchedEntries == 0) {
+                temp.delete()
+                LoggerBridge.append("▷ [Voxy] No libc.so.6 constant found in ${voxyJar.name}; compatibility patch skipped")
+                return null
+            }
+
             voxyJar.copyTo(backup, overwrite = true)
-            if (!temp.renameTo(voxyJar)) { temp.copyTo(voxyJar, overwrite = true); temp.delete() }
-            LoggerBridge.append("▷ [Voxy] Temporary Android libc compatibility patch applied")
+            if (!temp.renameTo(voxyJar)) {
+                temp.copyTo(voxyJar, overwrite = true)
+                temp.delete()
+            }
+
+            LoggerBridge.append("▷ [Voxy] Android libc compatibility patch applied to $patchedEntries class file(s)")
             return backup
         } catch (e: Throwable) {
-            runCatching { File(voxyJar.parentFile, "." + voxyJar.name + ".nux-patched.tmp").delete() }
+            runCatching {
+                File(voxyJar.parentFile, "." + voxyJar.name + ".nux-patched.tmp").delete()
+            }
             LoggerBridge.append("▷ [Voxy] Compatibility patch failed: " + e.message)
             return null
         }
     }
 
+    /**
+     * Rewrites the Java class-file UTF-8 constant "libc.so.6" to "libc.so".
+     * Android uses bionic libc and does not provide the desktop glibc SONAME libc.so.6.
+     */
     private fun patchVoxyLibcConstant(classBytes: ByteArray): ByteArray {
         val needle = "libc.so.6".toByteArray(Charsets.UTF_8)
         val replacement = "libc.so".toByteArray(Charsets.UTF_8)
+
         if (classBytes.size < needle.size + 2) return classBytes
-        for (i in 2..classBytes.size - needle.size) {
-            var match = true
-            for (j in needle.indices) if (classBytes[i + j] != needle[j]) { match = false; break }
-            if (!match) continue
-            val lengthOffset = i - 2
-            val length = ((classBytes[lengthOffset].toInt() and 0xFF) shl 8) or (classBytes[lengthOffset + 1].toInt() and 0xFF)
-            if (length != needle.size) continue
-            val out = ByteArray(classBytes.size - (needle.size - replacement.size))
-            System.arraycopy(classBytes, 0, out, 0, lengthOffset)
-            out[lengthOffset] = (replacement.size ushr 8).toByte(); out[lengthOffset + 1] = replacement.size.toByte()
-            System.arraycopy(replacement, 0, out, lengthOffset + 2, replacement.size)
-            val suffixStart = i + needle.size
-            System.arraycopy(classBytes, suffixStart, out, lengthOffset + 2 + replacement.size, classBytes.size - suffixStart)
-            return out
+
+        val out = java.io.ByteArrayOutputStream(classBytes.size)
+        var changed = false
+        var i = 0
+
+        while (i < classBytes.size) {
+            var match = false
+
+            if (i >= 2 && i + needle.size <= classBytes.size) {
+                val utfLength =
+                    ((classBytes[i - 2].toInt() and 0xFF) shl 8) or
+                    (classBytes[i - 1].toInt() and 0xFF)
+
+                if (utfLength == needle.size) {
+                    match = true
+                    for (j in needle.indices) {
+                        if (classBytes[i + j] != needle[j]) {
+                            match = false
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (match) {
+                out.write((replacement.size ushr 8) and 0xFF)
+                out.write(replacement.size and 0xFF)
+                out.write(replacement)
+                i += needle.size
+                changed = true
+            } else {
+                out.write(classBytes[i].toInt())
+                i++
+            }
         }
-        return classBytes
+
+        return if (changed) out.toByteArray() else classBytes
     }
 
     private fun restoreVoxyAndroidCompatibility(gameDir: File, backup: File?) {
