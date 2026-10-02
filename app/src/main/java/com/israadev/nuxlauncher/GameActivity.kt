@@ -1275,8 +1275,15 @@ fun GameScreen(
                 }
             },
             modifier = Modifier
-                .size(renderWidthDp, renderHeightDp)
-                .align(Alignment.Center)
+                .fillMaxSize()
+                .graphicsLayer {
+                    // Keep SurfaceView at real window bounds for native/SDL binding,
+                    // then scale the SurfaceView itself to preserve game aspect ratio.
+                    pivotX = screenWidth / 2f
+                    pivotY = screenHeight / 2f
+                    scaleX = if (screenWidth > 0f) renderWidthPx / screenWidth else 1f
+                    scaleY = if (screenHeight > 0f) renderHeightPx / screenHeight else 1f
+                }
         )
 
         // 2. Zalith-Style Touchpad & Input Controller Layer
