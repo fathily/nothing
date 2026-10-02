@@ -662,6 +662,17 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
         }.onFailure { LoggerBridge.append("▷ [Voxy] WARNING: could not restore original Voxy jar: " + it.message) }
     }
 
+    private fun ensureRuntimeExecutablePermissions(runtimeHome: File) {
+        runCatching {
+            File(runtimeHome, "bin/java").setExecutable(true, false)
+            runtimeHome.walkTopDown()
+                .filter { it.isFile && (it.name.endsWith(".so") || it.name == "java") }
+                .forEach { it.setExecutable(true, false) }
+        }.onFailure {
+            LoggerBridge.append("▷ [Runtime] Executable permission setup warning: ${it.message}")
+        }
+    }
+
     private fun startGameJVM() {
         thread(name = "NUX-JVM-Thread") {
             try {
@@ -914,7 +925,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 Os.setenv("HOME", gameDir.absolutePath, true)
                 Os.setenv("TMPDIR", cacheDir.absolutePath, true)
                 Os.setenv("PATH", "${runtimeHome.absolutePath}/bin:" + (Os.getenv("PATH") ?: "/system/bin"), true)
-                Os.setenv("LD_LIBRARY_PATH", gameLdLibraryPath, true)
+                Os.setenv("LD_LIBRARY_PATH", ldLibraryPath, true)
                 Os.setenv("AWTSTUB_WIDTH", "$targetWidth", true)
                 Os.setenv("AWTSTUB_HEIGHT", "$targetHeight", true)
                 Os.setenv("ALSOFT_DRIVERS", "opensl", true)
@@ -1088,13 +1099,13 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 }
 
                 // Pastikan permission executable (0755) pada bin/java dan runtime native libraries
-                com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.ensureExecutablePermissions(runtimeHome)
+                ensureRuntimeExecutablePermissions(runtimeHome)
 
                 val jvmArgs = mutableListOf<String>()
                 jvmArgs.add("${runtimeHome.absolutePath}/bin/java")
                 jvmArgs.add("-Djava.home=${runtimeHome.absolutePath}")
                 jvmArgs.add("-Djava.io.tmpdir=${cacheDir.absolutePath}")
-                jvmArgs.add("-Djava.library.path=$gameLdLibraryPath")
+                jvmArgs.add("-Djava.library.path=$ldLibraryPath")
                 jvmArgs.add("-Dorg.lwjgl.librarypath=$effectiveLwjglDir")
                 jvmArgs.add("-Dorg.lwjgl.opengl.libname=$glLibPath")
                 jvmArgs.add("-Dorg.lwjgl.openal.libname=$nativeLibDir/libopenal.so")
