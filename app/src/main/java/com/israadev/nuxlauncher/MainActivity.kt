@@ -51,8 +51,11 @@ class MainActivity : ComponentActivity() {
         // Initialize core engines
         AccountManager.init(this)
 
-        // Local guest profile for this fork. It does not contact or bypass the NUX license server.
-        if (AccountManager.getActiveUser() == null) {
+        // Local Guest profile for this fork.
+        // Guest gets the fork's local premium feature set without contacting or modifying
+        // the NUX license/activation server.
+        val activeUser = AccountManager.getActiveUser()
+        if (activeUser == null) {
             AccountManager.saveAuthUser(
                 this,
                 com.israadev.nuxlauncher.core.auth.AuthUser(
@@ -62,9 +65,21 @@ class MainActivity : ComponentActivity() {
                     photoURL = "",
                     platform = "android",
                     isActivated = true,
-                    tier = "cracked"
+                    tier = "premium"
                 )
             )
+        } else if (activeUser.email.equals("guest@local", ignoreCase = true)) {
+            // Upgrade old locally-created Guest sessions from the previous "cracked"
+            // marker so the new premium feature gates recognize Guest too.
+            if (!activeUser.isActivated || !activeUser.tier.equals("premium", ignoreCase = true)) {
+                AccountManager.saveAuthUser(
+                    this,
+                    activeUser.copy(
+                        isActivated = true,
+                        tier = "premium"
+                    )
+                )
+            }
         }
 
         InstanceManager.init(this)
