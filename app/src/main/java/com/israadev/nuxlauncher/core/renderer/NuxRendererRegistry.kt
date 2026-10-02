@@ -190,7 +190,8 @@ object NuxRendererRegistry {
     fun findRendererById(id: String): NuxRendererInfo {
         return availableRenderers.find { 
             it.id.equals(id, ignoreCase = true) || 
-            (it.isPlugin && it.pluginPackageName.equals(id.removePrefix("plugin_"), ignoreCase = true))
+            (it.isPlugin && it.pluginPackageName.equals(id.removePrefix("plugin_"), ignoreCase = true)) ||
+            (id.equals("mobilegl", ignoreCase = true) && it.displayName.equals("MobileGL", ignoreCase = true))
         } ?: RENDERER_AUTO
     }
 
@@ -226,7 +227,7 @@ object NuxRendererRegistry {
         }
 
         // 2. If user selected by plugin ID pattern or package name
-        if (selectedId.startsWith("plugin_") || selectedId.contains("com.fcl.plugin") || selectedId.contains("plugin")) {
+        if (selectedId.startsWith("plugin_") || selectedId.contains("com.fcl.plugin") || selectedId.contains("plugin") || selectedId == "top.mobilegl.plugin") {
             val pkg = selectedId.removePrefix("plugin_")
             val matchedPlugin = pluginRenderers.find {
                 it.id.equals(selectedId, ignoreCase = true) ||
