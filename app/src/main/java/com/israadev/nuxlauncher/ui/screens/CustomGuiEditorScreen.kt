@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -35,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.israadev.nuxlauncher.core.controls.ControlLayoutManager
 import com.israadev.nuxlauncher.core.controls.KeycodeCatalog
 import com.israadev.nuxlauncher.core.controls.models.CustomControlButton
@@ -50,188 +50,6 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 @Composable
-private fun KeyboardInputPickerDialog(
-    targetId: String,
-    onDismiss: () -> Unit,
-    onKeySelected: (com.israadev.nuxlauncher.core.controls.KeyOption) -> Unit
-) {
-    fun option(label: String): com.israadev.nuxlauncher.core.controls.KeyOption? =
-        KeycodeCatalog.ALL_KEYS.firstOrNull { it.displayName.equals(label, ignoreCase = true) }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = true
-        )
-    ) {
-        NuxCard(
-            Modifier
-                .fillMaxWidth(0.96f)
-                .fillMaxHeight(0.94f),
-            backgroundColor = Color(0xFF171B19),
-            shadowOffset = 8.dp,
-            cornerRadius = 16.dp
-        ) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "PILIH INPUT KEY MINECRAFT",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
-                        Text(
-                            "Keyboard virtual + mouse + aksi Minecraft",
-                            fontSize = 9.5.sp,
-                            color = Color(0xFFA5D6A7)
-                        )
-                    }
-                    Box(
-                        Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF3B1E22))
-                            .border(1.dp, Color(0xFF7F3840), CircleShape)
-                            .clickable(onClick = onDismiss),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("✕", color = Color(0xFFFF8A80), fontWeight = FontWeight.Black)
-                    }
-                }
-
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    fun key(label: String) = option(label)
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("ESC","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected) }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("1","2","3","4","5","6","7","8","9","0")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected) }
-                        KeyboardPickerKeyButton("-", key("-"), onKeySelected)
-                        KeyboardPickerKeyButton("=", key("="), onKeySelected)
-                        KeyboardPickerKeyButton("BACKSPACE", key("BACKSPACE"), onKeySelected, weight = 1.8f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyboardPickerKeyButton("TAB", key("TAB"), onKeySelected, weight = 1.35f)
-                        listOf("Q","W","E","R","T","Y","U","I","O","P")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected) }
-                        KeyboardPickerKeyButton("[", key("["), onKeySelected)
-                        KeyboardPickerKeyButton("]", key("]"), onKeySelected)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyboardPickerKeyButton("CAPS LOCK", key("CAPS LOCK"), onKeySelected, weight = 1.6f)
-                        listOf("A","S","D","F","G","H","J","K","L")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected) }
-                        KeyboardPickerKeyButton(";", key(";"), onKeySelected)
-                        KeyboardPickerKeyButton("ENTER", key("ENTER"), onKeySelected, weight = 1.5f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyboardPickerKeyButton("SHIFT", key("SHIFT"), onKeySelected, weight = 1.8f)
-                        listOf("Z","X","C","V","B","N","M")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected) }
-                        KeyboardPickerKeyButton(",", key(","), onKeySelected)
-                        KeyboardPickerKeyButton(".", key("."), onKeySelected)
-                        KeyboardPickerKeyButton("/", key("/"), onKeySelected)
-                        KeyboardPickerKeyButton("SHIFT", key("SHIFT"), onKeySelected, weight = 1.8f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyboardPickerKeyButton("CTRL", key("CTRL"), onKeySelected, weight = 1.2f)
-                        KeyboardPickerKeyButton("ALT", key("ALT"), onKeySelected, weight = 1.2f)
-                        KeyboardPickerKeyButton("SPACE", key("SPACE"), onKeySelected, weight = 5f)
-                        KeyboardPickerKeyButton("ALT", key("ALT"), onKeySelected, weight = 1.2f)
-                        KeyboardPickerKeyButton("CTRL", key("CTRL"), onKeySelected, weight = 1.2f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("INSERT","HOME","PAGE UP","DELETE","END","PAGE DOWN","ARROW UP","ARROW LEFT","ARROW DOWN","ARROW RIGHT")
-                            .forEach { KeyboardPickerKeyButton(it, key(it), onKeySelected, height = 30.dp) }
-                    }
-
-                    Text("MOUSE", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf(
-                            "Mouse Kiri (Attack/Break)",
-                            "Mouse Kanan (Use/Place)",
-                            "Mouse Tengah (Pick Block)",
-                            "Scroll Wheel (Slide Naik/Turun)"
-                        ).forEach { label ->
-                            val shown = label.substringBefore(" (").removePrefix("Mouse ").removePrefix("Scroll Wheel ")
-                            KeyboardPickerKeyButton(shown, key(label), onKeySelected, height = 38.dp, compact = true)
-                        }
-                    }
-
-                    Text("AKSI MINECRAFT", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("E","Q","F","T","ESCAPE","TAB").forEach {
-                            KeyboardPickerKeyButton(it, key(it), onKeySelected)
-                        }
-                    }
-                }
-
-                Text(
-                    "Tap tombol keyboard = langsung dipasang ke tombol yang sedang diedit",
-                    color = Color(0xFF7D8B83),
-                    fontSize = 8.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.KeyboardPickerKeyButton(
-    label: String,
-    key: com.israadev.nuxlauncher.core.controls.KeyOption?,
-    onKeySelected: (com.israadev.nuxlauncher.core.controls.KeyOption) -> Unit,
-    weight: Float = 1f,
-    height: androidx.compose.ui.unit.Dp = 34.dp,
-    compact: Boolean = false
-) {
-    Box(
-        Modifier
-            .weight(weight)
-            .height(height)
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (compact) Color(0xFF202622) else Color(0xFF2A2D2C))
-            .border(
-                1.dp,
-                if (compact) Color(0xFF385044) else Color(0xFF424644),
-                RoundedCornerShape(6.dp)
-            )
-            .clickable(enabled = key != null) {
-                key?.let(onKeySelected)
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            label,
-            color = Color.White,
-            fontSize = if (label.length > 6) 7.sp else 9.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
-    }
-}
-
-@Composable
 fun CustomGuiEditorScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -243,6 +61,8 @@ fun CustomGuiEditorScreen(
     var buttonsList by remember { mutableStateOf(savedButtons.ifEmpty { ControlLayoutManager.getDefaultButtons() }) }
     var selectedButtonId by remember { mutableStateOf<String?>(null) }
     var showKeyPickerForButtonId by remember { mutableStateOf<String?>(null) }
+    var keyPickerTargetMode by remember { mutableStateOf("MAIN") } // "MAIN" or "COMBO"
+    var keyPickerSearchQuery by remember { mutableStateOf("") }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var manualFlipSide by remember { mutableStateOf<Boolean?>(null) }
 
@@ -388,7 +208,58 @@ fun CustomGuiEditorScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (btn.isScroll) {
+                if (btn.isJoystick) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val r = size.minDimension / 2f
+                            val c = Offset(size.width / 2f, size.height / 2f)
+
+                            // Outer ring
+                            drawCircle(
+                                color = if (isSelected) Color(0xFFFFD166) else Color(0x6034D399),
+                                radius = r - 2.dp.toPx(),
+                                center = c,
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                            // Crosshairs
+                            drawLine(
+                                color = Color(0x3534D399),
+                                start = Offset(c.x, c.y - r * 0.7f),
+                                end = Offset(c.x, c.y + r * 0.7f),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                            drawLine(
+                                color = Color(0x3534D399),
+                                start = Offset(c.x - r * 0.7f, c.y),
+                                end = Offset(c.x + r * 0.7f, c.y),
+                                strokeWidth = 1.dp.toPx()
+                            )
+
+                            // Center knob
+                            val knobRadius = r * 0.38f
+                            drawCircle(
+                                color = if (isSelected) Color(0xCC10B981) else Color(0xCC1B2921),
+                                radius = knobRadius,
+                                center = c
+                            )
+                            drawCircle(
+                                color = if (isSelected) Color(0xFFFFD166) else Color(0xFF34D399),
+                                radius = knobRadius,
+                                center = c,
+                                style = Stroke(width = 1.5.dp.toPx())
+                            )
+                            drawCircle(
+                                color = if (isSelected) Color(0xFF022C22) else Color(0xFF69F0AE),
+                                radius = 3.5.dp.toPx(),
+                                center = c
+                            )
+                        }
+                        Text("W", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp))
+                        Text("S", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+                        Text("A", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.CenterStart).padding(start = 5.dp))
+                        Text("D", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 5.dp))
+                    }
+                } else if (btn.isScroll) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.SpaceBetween,
@@ -482,6 +353,19 @@ fun CustomGuiEditorScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                        if (btn.isMacro) {
+                            Text(
+                                text = when (btn.macroType) {
+                                    "COMMAND" -> "⚡CMD"
+                                    "COMBO" -> "⚡CMB"
+                                    "TURBO" -> "⚡TRB"
+                                    else -> "⚡MAC"
+                                },
+                                color = if (isSelected) Color(0xFF022C22) else Color(0xFFFFD166),
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                 }
             }
@@ -543,7 +427,35 @@ fun CustomGuiEditorScreen(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("+ TAMBAH", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color.White)
+                Text("+ TOMBOL", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color.White)
+            }
+
+            // + JOYSTICK
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFF1E3A8A).copy(alpha = 0.85f), RoundedCornerShape(6.dp))
+                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(6.dp))
+                    .clickable {
+                        val newJoy = CustomControlButton(
+                            id = "joy_" + UUID.randomUUID().toString().take(6),
+                            name = "JOYSTICK",
+                            isJoystick = true,
+                            xPercent = 20f,
+                            yPercent = 70f,
+                            widthDp = 130,
+                            heightDp = 130,
+                            cornerRadiusDp = 65,
+                            opacity = 0.85f
+                        )
+                        buttonsList = buttonsList + newJoy
+                        selectedButtonId = newJoy.id
+                        manualFlipSide = null
+                        Toast.makeText(context, "Joystick WASD ditambahkan!", Toast.LENGTH_SHORT).show()
+                    }
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🕹 + JOYSTICK", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color(0xFF93C5FD))
             }
 
             // RESET
@@ -695,136 +607,195 @@ fun CustomGuiEditorScreen(
                             }
                         }
 
-                        // 2. Mapped Keycode / Input
-                        Text("Tombol / Aksi Input:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
-                        if (selectedButton.isSystem) {
+                        if (selectedButton.isJoystick) {
+                            Text("Tipe Kontrol:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFF1F2D25).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color(0xFF2C3E34), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    .background(Color(0xFF16251E), RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color(0xFF2E7D5B), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
-                                val actionDesc = when (selectedButton.systemAction) {
-                                    "FPS" -> "Indikator FPS In-Game"
-                                    "KEYBOARD" -> "Toggle Keyboard Layar"
-                                    "HIDE_GUI" -> "Sembunyikan/Tampilkan GUI"
-                                    "CLOSE" -> "Keluar dari Permainan"
-                                    else -> "Aksi Sistem Launcher"
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("🕹 Virtual Analog Joystick (WASD)", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                                    Text("Analog 8-arah halus menggerakkan karakter menggantikan tombol W, A, S, D.", color = Color(0xFFA5D6A7), fontSize = 9.sp)
                                 }
-                                Text(actionDesc, color = Color(0xFF81C784), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             }
-                        } else {
-                            val mappedKeyName = remember(selectedButton) {
-                                if (selectedButton.isScroll) {
-                                    "Scroll Wheel (Slide Naik/Turun)"
-                                } else if (selectedButton.isMouseButton) {
-                                    when (selectedButton.mouseButton) {
-                                        LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT -> "Mouse Kiri (Attack)"
-                                        LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT -> "Mouse Kanan (Use)"
-                                        LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_MIDDLE -> "Mouse Tengah (Pick)"
-                                        else -> "Mouse Btn ${selectedButton.mouseButton}"
+
+                            // Diameter Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Ukuran Joystick (Diameter):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${selectedButton.widthDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.widthDp.toFloat(),
+                                onValueChange = { newD ->
+                                    val d = newD.roundToInt()
+                                    buttonsList = buttonsList.map {
+                                        if (it.id == selectedButton.id) it.copy(widthDp = d, heightDp = d, cornerRadiusDp = d / 2) else it
                                     }
-                                } else {
-                                    KeycodeCatalog.ALL_KEYS.firstOrNull { it.keyCode == selectedButton.keyCode }?.displayName
-                                        ?: "Key Code ${selectedButton.keyCode}"
-                                }
-                            }
+                                },
+                                valueRange = 80f..220f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
+                            )
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color(0xFF3B5244), RoundedCornerShape(8.dp))
-                                    .clickable { showKeyPickerForButtonId = selectedButton.id }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            // Opacity Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Transparansi (Opacity):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${(selectedButton.opacity * 100).roundToInt()}%", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.opacity,
+                                onValueChange = { newOp ->
+                                    buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(opacity = (newOp * 100).roundToInt() / 100f) else it }
+                                },
+                                valueRange = 0.15f..1.0f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
+                            )
+                        } else {
+                            // 2. Mapped Keycode / Input
+                            Text("Tombol / Aksi Input:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                            if (selectedButton.isSystem) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF1F2D25).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFF2C3E34), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
                                 ) {
-                                    Text(mappedKeyName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Ubah >", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                    val actionDesc = when (selectedButton.systemAction) {
+                                        "FPS" -> "Indikator FPS In-Game"
+                                        "KEYBOARD" -> "Toggle Keyboard Layar"
+                                        "HIDE_GUI" -> "Sembunyikan/Tampilkan GUI"
+                                        "CLOSE" -> "Keluar dari Permainan"
+                                        else -> "Aksi Sistem Launcher"
+                                    }
+                                    Text(actionDesc, color = Color(0xFF81C784), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            } else {
+                                val mappedKeyName = remember(selectedButton) {
+                                    if (selectedButton.isScroll) {
+                                        "Scroll Wheel (Slide Naik/Turun)"
+                                    } else if (selectedButton.isMouseButton) {
+                                        when (selectedButton.mouseButton) {
+                                            LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT -> "Mouse Kiri (Attack)"
+                                            LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT -> "Mouse Kanan (Use)"
+                                            LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_MIDDLE -> "Mouse Tengah (Pick)"
+                                            else -> "Mouse Btn ${selectedButton.mouseButton}"
+                                        }
+                                    } else {
+                                        KeycodeCatalog.ALL_KEYS.firstOrNull { it.keyCode == selectedButton.keyCode }?.displayName
+                                            ?: "Key Code ${selectedButton.keyCode}"
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFF3B5244), RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            keyPickerTargetMode = "MAIN"
+                                            keyPickerSearchQuery = ""
+                                            showKeyPickerForButtonId = selectedButton.id
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(mappedKeyName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Ubah >", color = Color(0xFF69F0AE), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                    }
                                 }
                             }
-                        }
 
-                        // 3. Width Slider
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Lebar (Width):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
-                            Text("${selectedButton.widthDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
-                        }
-                        Slider(
-                            value = selectedButton.widthDp.toFloat(),
-                            onValueChange = { newW ->
-                                buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(widthDp = newW.roundToInt()) else it }
-                            },
-                            valueRange = 24f..160f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF4CAF50),
-                                activeTrackColor = Color(0xFF4CAF50),
-                                inactiveTrackColor = Color(0xFF2C3E34)
+                            // 3. Width Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Lebar (Width):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${selectedButton.widthDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.widthDp.toFloat(),
+                                onValueChange = { newW ->
+                                    buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(widthDp = newW.roundToInt()) else it }
+                                },
+                                valueRange = 24f..160f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
                             )
-                        )
 
-                        // 4. Height Slider
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Tinggi (Height):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
-                            Text("${selectedButton.heightDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
-                        }
-                        Slider(
-                            value = selectedButton.heightDp.toFloat(),
-                            onValueChange = { newH ->
-                                buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(heightDp = newH.roundToInt()) else it }
-                            },
-                            valueRange = 24f..160f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF4CAF50),
-                                activeTrackColor = Color(0xFF4CAF50),
-                                inactiveTrackColor = Color(0xFF2C3E34)
+                            // 4. Height Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Tinggi (Height):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${selectedButton.heightDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.heightDp.toFloat(),
+                                onValueChange = { newH ->
+                                    buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(heightDp = newH.roundToInt()) else it }
+                                },
+                                valueRange = 24f..160f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
                             )
-                        )
 
-                        // 5. Opacity Slider
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Transparansi (Opacity):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
-                            Text("${(selectedButton.opacity * 100).roundToInt()}%", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
-                        }
-                        Slider(
-                            value = selectedButton.opacity,
-                            onValueChange = { newOp ->
-                                buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(opacity = (newOp * 100).roundToInt() / 100f) else it }
-                            },
-                            valueRange = 0.15f..1.0f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF4CAF50),
-                                activeTrackColor = Color(0xFF4CAF50),
-                                inactiveTrackColor = Color(0xFF2C3E34)
+                            // 5. Opacity Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Transparansi (Opacity):", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${(selectedButton.opacity * 100).roundToInt()}%", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.opacity,
+                                onValueChange = { newOp ->
+                                    buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(opacity = (newOp * 100).roundToInt() / 100f) else it }
+                                },
+                                valueRange = 0.15f..1.0f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
                             )
-                        )
 
-                        // 6. Corner Radius Slider
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Kebulatan Sudut:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
-                            Text("${selectedButton.cornerRadiusDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
-                        }
-                        Slider(
-                            value = selectedButton.cornerRadiusDp.toFloat(),
-                            onValueChange = { newR ->
-                                buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(cornerRadiusDp = newR.roundToInt()) else it }
-                            },
-                            valueRange = 0f..28f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF4CAF50),
-                                activeTrackColor = Color(0xFF4CAF50),
-                                inactiveTrackColor = Color(0xFF2C3E34)
+                            // 6. Corner Radius Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Kebulatan Sudut:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                Text("${selectedButton.cornerRadiusDp} dp", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                            }
+                            Slider(
+                                value = selectedButton.cornerRadiusDp.toFloat(),
+                                onValueChange = { newR ->
+                                    buttonsList = buttonsList.map { if (it.id == selectedButton.id) it.copy(cornerRadiusDp = newR.roundToInt()) else it }
+                                },
+                                valueRange = 0f..28f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4CAF50),
+                                    activeTrackColor = Color(0xFF4CAF50),
+                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                )
                             )
-                        )
+                        }
 
                         // 7. Toggle Mode Switch (Only for normal key buttons)
-                        if (!selectedButton.isSystem) {
+                        if (!selectedButton.isSystem && !selectedButton.isJoystick) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -846,6 +817,345 @@ fun CustomGuiEditorScreen(
                                         uncheckedTrackColor = Color(0xFF2C3E34)
                                     )
                                 )
+                            }
+                        }
+
+                        // 8. Fitur Makro (Macro Settings)
+                        if (!selectedButton.isSystem && !selectedButton.isScroll && !selectedButton.isJoystick) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF16241D), RoundedCornerShape(10.dp))
+                                    .border(1.dp, if (selectedButton.isMacro) Color(0xFF10B981) else Color(0xFF2C3E34), RoundedCornerShape(10.dp))
+                                    .padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Macro Header & Toggle
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("⚡ FITUR MAKRO", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (selectedButton.isMacro) Color(0xFF69F0AE) else Color.White)
+                                            if (selectedButton.isMacro) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(Color(0x3310B981), RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text("AKTIF", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                                                }
+                                            }
+                                        }
+                                        Text("Jadikan tombol ini sebagai makro otomatis", fontSize = 8.sp, color = Color(0xFFA5D6A7))
+                                    }
+                                    Switch(
+                                        checked = selectedButton.isMacro,
+                                        onCheckedChange = { isMacroEnabled ->
+                                            buttonsList = buttonsList.map {
+                                                if (it.id == selectedButton.id) it.copy(isMacro = isMacroEnabled) else it
+                                            }
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFF69F0AE),
+                                            checkedTrackColor = Color(0xFF1B5E20),
+                                            uncheckedThumbColor = Color(0xFF757575),
+                                            uncheckedTrackColor = Color(0xFF2C3E34)
+                                        )
+                                    )
+                                }
+
+                                if (selectedButton.isMacro) {
+                                    HorizontalDivider(color = Color(0xFF23362A), thickness = 1.dp)
+
+                                    // Macro Mode Selector
+                                    Text("Pilih Mode Makro:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA5D6A7))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        val types = listOf(
+                                            Triple("COMMAND", "⌨ Chat/Perintah", "Ketik otomatis"),
+                                            Triple("COMBO", "🔗 Kombinasi", "Multi-Key"),
+                                            Triple("TURBO", "⚡ Turbo Click", "Auto-clicker")
+                                        )
+                                        types.forEach { (typeKey, typeLabel, _) ->
+                                            val isChosen = selectedButton.macroType == typeKey
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .background(
+                                                        if (isChosen) Color(0xFF10B981) else Color(0xFF1F2D25),
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        if (isChosen) Color(0xFF69F0AE) else Color(0xFF2F4237),
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .clickable {
+                                                        buttonsList = buttonsList.map {
+                                                            if (it.id == selectedButton.id) it.copy(macroType = typeKey) else it
+                                                        }
+                                                    }
+                                                    .padding(vertical = 6.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = typeLabel,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = if (isChosen) FontWeight.Black else FontWeight.Bold,
+                                                    color = if (isChosen) Color(0xFF022C22) else Color.White,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Mode 1: COMMAND
+                                    if (selectedButton.macroType == "COMMAND") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text("Teks / Perintah yang diketik otomatis:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                            BasicTextField(
+                                                value = selectedButton.macroCommand,
+                                                onValueChange = { newCmd ->
+                                                    buttonsList = buttonsList.map {
+                                                        if (it.id == selectedButton.id) it.copy(macroCommand = newCmd) else it
+                                                    }
+                                                },
+                                                textStyle = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                                                cursorBrush = SolidColor(Color(0xFF69F0AE)),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color(0xFF111A15), RoundedCornerShape(6.dp))
+                                                    .border(1.dp, Color(0xFF2F4237), RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                decorationBox = { innerTextField ->
+                                                    if (selectedButton.macroCommand.isEmpty()) {
+                                                        Text(
+                                                            text = "Misal: /gamemode creative atau /home",
+                                                            color = Color(0xFF6B8A78),
+                                                            fontSize = 10.sp
+                                                        )
+                                                    }
+                                                    innerTextField()
+                                                }
+                                            )
+
+                                            // Quick Chips
+                                            Text("Template Cepat:", fontSize = 8.sp, color = Color(0xFFA5D6A7))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                listOf("/gamemode c", "/gamemode s", "/spawn", "/home").forEach { sample ->
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(Color(0xFF1B2921), RoundedCornerShape(4.dp))
+                                                            .border(0.5.dp, Color(0xFF2C4234), RoundedCornerShape(4.dp))
+                                                            .clickable {
+                                                                buttonsList = buttonsList.map {
+                                                                    if (it.id == selectedButton.id) it.copy(macroCommand = sample) else it
+                                                                }
+                                                            }
+                                                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                                                    ) {
+                                                        Text(sample, fontSize = 8.sp, color = Color(0xFF81C784), fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Mode 2: COMBO (Multi-key sequence executed top to bottom)
+                                    if (selectedButton.macroType == "COMBO") {
+                                        val comboKeysList = remember(selectedButton.macroComboKeys, selectedButton.macroComboKey) {
+                                            if (selectedButton.macroComboKeys.isNotEmpty()) {
+                                                selectedButton.macroComboKeys
+                                            } else if (selectedButton.macroComboKey != 0) {
+                                                listOf(selectedButton.macroComboKey)
+                                            } else {
+                                                emptyList()
+                                            }
+                                        }
+
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text("Urutan Key Kombinasi:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                if (comboKeysList.isNotEmpty()) {
+                                                    Text(
+                                                        text = "Hapus Semua",
+                                                        fontSize = 8.sp,
+                                                        color = Color(0xFFFF8A80),
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.clickable {
+                                                            buttonsList = buttonsList.map {
+                                                                if (it.id == selectedButton.id) it.copy(macroComboKeys = emptyList(), macroComboKey = 0) else it
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+
+                                            if (comboKeysList.isEmpty()) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .background(Color(0xFF111A15), RoundedCornerShape(6.dp))
+                                                        .border(1.dp, Color(0xFF2C3E34), RoundedCornerShape(6.dp))
+                                                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "Belum ada key kombinasi. Tambahkan key di bawah.",
+                                                        color = Color(0xFF81C784),
+                                                        fontSize = 9.sp
+                                                    )
+                                                }
+                                            } else {
+                                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                    comboKeysList.forEachIndexed { index, keyCode ->
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .background(Color(0xFF111A15), RoundedCornerShape(6.dp))
+                                                                .border(1.dp, Color(0xFF2F4237), RoundedCornerShape(6.dp))
+                                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .background(Color(0x3310B981), RoundedCornerShape(4.dp))
+                                                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                                ) {
+                                                                    Text("#${index + 1}", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                                                                }
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text(
+                                                                    text = KeycodeCatalog.getKeyName(keyCode),
+                                                                    color = Color.White,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 10.sp,
+                                                                    maxLines = 1
+                                                                )
+                                                            }
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(20.dp)
+                                                                    .background(Color(0xFF3B1E22), CircleShape)
+                                                                    .clickable {
+                                                                        val updated = comboKeysList.toMutableList().apply { removeAt(index) }
+                                                                        buttonsList = buttonsList.map {
+                                                                            if (it.id == selectedButton.id) {
+                                                                                it.copy(macroComboKeys = updated, macroComboKey = updated.firstOrNull() ?: 0)
+                                                                            } else it
+                                                                        }
+                                                                    },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Text("✕", fontSize = 9.sp, color = Color(0xFFFF8A80), fontWeight = FontWeight.Black)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // Add Key Button
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color(0xFF1F2D25), RoundedCornerShape(6.dp))
+                                                    .border(1.dp, Color(0xFF3B5244), RoundedCornerShape(6.dp))
+                                                    .clickable {
+                                                        keyPickerTargetMode = "COMBO"
+                                                        keyPickerSearchQuery = ""
+                                                        showKeyPickerForButtonId = selectedButton.id
+                                                    }
+                                                    .padding(vertical = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text("+", fontSize = 12.sp, color = Color(0xFF69F0AE), fontWeight = FontWeight.Black)
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Tambah Key ke Kombinasi", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+
+                                            // Quick Combo Chips
+                                            Text("Tambah Cepat:", fontSize = 8.sp, color = Color(0xFFA5D6A7))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                listOf(
+                                                    "F3" to LwjglGlfwKeycode.GLFW_KEY_F3,
+                                                    "B" to LwjglGlfwKeycode.GLFW_KEY_B,
+                                                    "SHIFT" to LwjglGlfwKeycode.GLFW_KEY_LEFT_SHIFT,
+                                                    "CTRL" to LwjglGlfwKeycode.GLFW_KEY_LEFT_CONTROL,
+                                                    "ALT" to LwjglGlfwKeycode.GLFW_KEY_LEFT_ALT,
+                                                    "Q" to LwjglGlfwKeycode.GLFW_KEY_Q
+                                                ).forEach { (label, code) ->
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(Color(0xFF1B2921), RoundedCornerShape(4.dp))
+                                                            .border(0.5.dp, Color(0xFF2C4234), RoundedCornerShape(4.dp))
+                                                            .clickable {
+                                                                val updated = comboKeysList + code
+                                                                buttonsList = buttonsList.map {
+                                                                    if (it.id == selectedButton.id) {
+                                                                        it.copy(macroComboKeys = updated, macroComboKey = updated.firstOrNull() ?: 0)
+                                                                    } else it
+                                                                }
+                                                            }
+                                                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                                                    ) {
+                                                        Text("+ $label", fontSize = 8.sp, color = Color(0xFF81C784), fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                            Text("Dieksekusi berurutan dari atas (#1) ke bawah saat ditekan.", fontSize = 8.sp, color = Color(0xFFA5D6A7))
+                                        }
+                                    }
+
+                                    // Mode 3: TURBO
+                                    if (selectedButton.macroType == "TURBO") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("Interval Auto-Click:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                val cps = (1000f / selectedButton.macroTurboIntervalMs.coerceAtLeast(1L)).roundToInt()
+                                                Text("${selectedButton.macroTurboIntervalMs} ms (~$cps CPS)", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color(0xFF69F0AE))
+                                            }
+                                            Slider(
+                                                value = selectedButton.macroTurboIntervalMs.toFloat(),
+                                                onValueChange = { newInterval ->
+                                                    buttonsList = buttonsList.map {
+                                                        if (it.id == selectedButton.id) it.copy(macroTurboIntervalMs = newInterval.toLong()) else it
+                                                    }
+                                                },
+                                                valueRange = 40f..500f,
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = Color(0xFF4CAF50),
+                                                    activeTrackColor = Color(0xFF4CAF50),
+                                                    inactiveTrackColor = Color(0xFF2C3E34)
+                                                )
+                                            )
+                                            Text("Tombol akan menekan & melepas berulang-ulang sangat cepat secara otomatis saat ditekan.", fontSize = 8.sp, color = Color(0xFFA5D6A7))
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -890,34 +1200,215 @@ fun CustomGuiEditorScreen(
         }
     }
 
-    // Keyboard-style Minecraft input picker.
+    // Keycode Picker Dialog
     if (showKeyPickerForButtonId != null) {
-        KeyboardInputPickerDialog(
-            targetId = showKeyPickerForButtonId!!,
-            onDismiss = { showKeyPickerForButtonId = null },
-            onKeySelected = { option ->
-                val targetId = showKeyPickerForButtonId ?: return@KeyboardInputPickerDialog
-                buttonsList = buttonsList.map {
-                    if (it.id == targetId) {
-                        it.copy(
-                            keyCode = option.keyCode,
-                            isMouseButton = option.isMouseButton,
-                            mouseButton = option.mouseButton,
-                            isScroll = option.isScroll,
-                            name = if (option.isScroll) {
-                                "SCROLL"
-                            } else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") {
-                                option.displayName.take(8)
-                            } else {
-                                it.name
+        val targetId = showKeyPickerForButtonId!!
+        val isComboMode = keyPickerTargetMode == "COMBO"
+
+        Dialog(onDismissRequest = {
+            showKeyPickerForButtonId = null
+            keyPickerSearchQuery = ""
+        }) {
+            NuxCard(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.88f),
+                backgroundColor = Color(0xFF16201B),
+                shadowOffset = 6.dp,
+                cornerRadius = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isComboMode) "Pilih Tombol Kedua (Kombinasi)" else "Pilih Input Key Minecraft",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (isComboMode) "Tombol ini akan ditekan bersamaan dengan tombol utama" else "Tersedia semua keyboard A-Z, F1-F12, angka, modifier & simbol",
+                                fontSize = 9.sp,
+                                color = Color(0xFFA5D6A7)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0xFF3B1E22), CircleShape)
+                                .border(1.dp, Color(0xFF5E2D32), CircleShape)
+                                .clickable {
+                                    showKeyPickerForButtonId = null
+                                    keyPickerSearchQuery = ""
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFFF8A80))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Search Input Box (Compact, single-line, elegant)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                            .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFF3B5244), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔍", fontSize = 11.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        BasicTextField(
+                            value = keyPickerSearchQuery,
+                            onValueChange = { keyPickerSearchQuery = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                            cursorBrush = SolidColor(Color(0xFF69F0AE)),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                if (keyPickerSearchQuery.isEmpty()) {
+                                    Text("Cari key (W, Alt, F3, Tab, Shift...)", color = Color(0xFF6B8A78), fontSize = 10.sp, maxLines = 1)
+                                }
+                                innerTextField()
                             }
                         )
+                        if (keyPickerSearchQuery.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(Color(0xFF2E3E34), CircleShape)
+                                    .clickable { keyPickerSearchQuery = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("✕", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Key List
+                    val availableKeys = remember(isComboMode) {
+                        if (isComboMode) {
+                            KeycodeCatalog.ALL_KEYS.filter { !it.isScroll && !it.isMouseButton }
+                        } else {
+                            KeycodeCatalog.ALL_KEYS
+                        }
+                    }
+
+                    val filteredKeys = remember(availableKeys, keyPickerSearchQuery) {
+                        if (keyPickerSearchQuery.isBlank()) {
+                            availableKeys
+                        } else {
+                            val q = keyPickerSearchQuery.trim().lowercase()
+                            availableKeys.filter {
+                                it.displayName.lowercase().contains(q) || it.category.lowercase().contains(q)
+                            }
+                        }
+                    }
+
+                    if (filteredKeys.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Tidak ada tombol yang cocok dengan \"$keyPickerSearchQuery\"",
+                                color = Color(0xFF81C784),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     } else {
-                        it
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val grouped = filteredKeys.groupBy { it.category }
+                            grouped.forEach { (category, keys) ->
+                                item {
+                                    Text(
+                                        text = category.uppercase(),
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF69F0AE),
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                    )
+                                }
+                                items(keys) { keyOpt ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
+                                            .border(1.dp, Color(0xFF2F4237), RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                buttonsList = buttonsList.map {
+                                                    if (it.id == targetId) {
+                                                        if (isComboMode) {
+                                                            val existing = it.macroComboKeys.ifEmpty {
+                                                                if (it.macroComboKey != 0) listOf(it.macroComboKey) else emptyList()
+                                                            }
+                                                            val updated = existing + keyOpt.keyCode
+                                                            it.copy(macroComboKeys = updated, macroComboKey = updated.firstOrNull() ?: 0)
+                                                        } else {
+                                                            it.copy(
+                                                                keyCode = keyOpt.keyCode,
+                                                                isMouseButton = keyOpt.isMouseButton,
+                                                                mouseButton = keyOpt.mouseButton,
+                                                                isScroll = keyOpt.isScroll,
+                                                                name = if (keyOpt.isScroll) "SCROLL"
+                                                                else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") {
+                                                                    keyOpt.displayName.substringBefore(" ").take(6)
+                                                                } else it.name
+                                                            )
+                                                        }
+                                                    } else it
+                                                }
+                                                showKeyPickerForButtonId = null
+                                                keyPickerSearchQuery = ""
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = keyOpt.displayName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = keyOpt.category,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 9.sp,
+                                                color = Color(0xFFA5D6A7)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-        )
+        }
     }
 
     // Reset Confirmation Dialog
