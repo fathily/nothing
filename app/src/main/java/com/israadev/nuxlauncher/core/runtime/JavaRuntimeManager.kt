@@ -99,6 +99,9 @@ object JavaRuntimeManager {
                 return@withContext Result.success(destDir)
             }
 
+            if (destDir.exists()) {
+                destDir.deleteRecursively()
+            }
             destDir.mkdirs()
             val arch = getDeviceArch()
             val assetPath = "runtimes/$runtimeName"
@@ -136,6 +139,12 @@ object JavaRuntimeManager {
                 bin.setExecutable(true, false)
             }
 
+            val hasJava = File(destDir, "bin/java").exists()
+            val hasJli = destDir.walkTopDown().any { it.isFile && it.name == "libjli.so" }
+            val hasJvm = destDir.walkTopDown().any { it.isFile && it.name == "libjvm.so" }
+            if (!hasJava || !hasJli || !hasJvm) {
+                return@withContext Result.failure(IllegalStateException("Incomplete $runtimeName runtime: java=$hasJava, libjli=$hasJli, libjvm=$hasJvm"))
+            }
             Result.success(destDir)
         } catch (e: Exception) {
             Result.failure(e)
@@ -151,9 +160,12 @@ object JavaRuntimeManager {
 
                 if (entry.isSymbolicLink) {
                     try {
-                        if (targetFile.exists()) targetFile.delete()
+                        targetFile.delete()
+                        targetFile.parentFile?.mkdirs()
                         Os.symlink(entry.linkName, targetFile.absolutePath)
-                    } catch (_: Throwable) {}
+                    } catch (e: Throwable) {
+                        throw IllegalStateException("Failed to create JRE symlink ${entry.name} -> ${entry.linkName}", e)
+                    }
                 } else if (entry.isDirectory) {
                     targetFile.mkdirs()
                 } else {
