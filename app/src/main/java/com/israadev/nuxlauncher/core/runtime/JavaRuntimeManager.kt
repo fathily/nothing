@@ -78,6 +78,26 @@ object JavaRuntimeManager {
         }
     }
 
+    /**
+     * Resolves the runtime for an instance using this precedence:
+     * instance override -> global Settings runtime -> Minecraft recommendation.
+     * "auto" means let NUX choose the recommended Java for the Minecraft version.
+     */
+    fun resolveRuntimeName(
+        instanceRuntime: String?,
+        globalRuntime: String?,
+        mcVersion: String,
+        javaMajorVersion: Int? = null
+    ): String {
+        val instance = instanceRuntime?.trim()?.lowercase().orEmpty()
+        if (instance.isNotBlank() && instance != "auto") return instanceRuntime!!.trim()
+
+        val global = globalRuntime?.trim()?.lowercase().orEmpty()
+        if (global.isNotBlank() && global != "auto") return globalRuntime!!.trim()
+
+        return getRecommendedRuntime(mcVersion, javaMajorVersion)
+    }
+
     fun getRuntimeDisplayName(runtimeName: String): String {
         return when (runtimeName) {
             "jre-8" -> "Java 8 (Auto)"
