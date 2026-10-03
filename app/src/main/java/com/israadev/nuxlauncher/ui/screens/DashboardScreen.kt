@@ -490,7 +490,11 @@ fun DashboardScreen() {
                                                             }
 
                                                             if (!isFullyDownloaded) {
-                                                                val targetRuntime = JavaRuntimeManager.getRecommendedRuntime(inst.mcVersion)
+                                                                val targetRuntime = JavaRuntimeManager.resolveRuntimeName(
+                                                                        instanceRuntime = inst.javaRuntime,
+                                                                        globalRuntime = launcherSettings.defaultJavaRuntime,
+                                                                        mcVersion = inst.mcVersion
+                                                                    )
                                                                 isDownloading = true
                                                                 downloadTargetName = inst.name
                                                                 downloadProgress = 0f
@@ -515,7 +519,11 @@ fun DashboardScreen() {
                                                             } else {
                                                                 // Validate the JRE even when the Minecraft instance itself is already downloaded.
                                                                 scope.launch {
-                                                                    val targetRuntime = JavaRuntimeManager.getRecommendedRuntime(inst.mcVersion)
+                                                                    val targetRuntime = JavaRuntimeManager.resolveRuntimeName(
+                                                                        instanceRuntime = inst.javaRuntime,
+                                                                        globalRuntime = launcherSettings.defaultJavaRuntime,
+                                                                        mcVersion = inst.mcVersion
+                                                                    )
                                                                     if (!JavaRuntimeManager.isRuntimeInstalled(context, targetRuntime)) {
                                                                         isDownloading = true
                                                                         downloadTargetName = inst.name
