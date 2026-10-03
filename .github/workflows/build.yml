@@ -10,13 +10,15 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest build for the branch. Rapid UI/performance commits
+# should not leave a pile of redundant APK builds running in parallel.
 concurrency:
   group: android-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build Signed Update APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
@@ -30,32 +32,15 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Prepare signing key
-        env:
-          NUX_KEYSTORE_B64: ${{ secrets.NUX_KEYSTORE_B64 }}
-        run: |
-          if [ -z "$NUX_KEYSTORE_B64" ]; then
-            echo "Missing NUX_KEYSTORE_B64 repository secret."
-            echo "Add the persistent NUX signing keystore as a GitHub Actions secret."
-            exit 1
-          fi
-          mkdir -p signing
-          printf '%s' "$NUX_KEYSTORE_B64" | base64 --decode > signing/nux-release.jks
-          chmod 600 signing/nux-release.jks
-
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build signed update APK
-        env:
-          NUX_KEYSTORE_PASSWORD: ${{ secrets.NUX_KEYSTORE_PASSWORD }}
-          NUX_KEY_ALIAS: ${{ secrets.NUX_KEY_ALIAS }}
-          NUX_KEY_PASSWORD: ${{ secrets.NUX_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
-      - name: Upload update APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: nux-launcher-update-v1.0.9
-          path: "app/build/outputs/apk/release/*.apk"
+          name: nux-launcher-debug
+          path: "app/build/outputs/apk/debug/*.apk"
           if-no-files-found: error
