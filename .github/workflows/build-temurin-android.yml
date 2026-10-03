@@ -97,7 +97,7 @@ jobs:
 
           mkdir -p "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}"
           cp "$archive" "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}/universal.tar.xz"
-          printf '%s\n' "Android ARM64 OpenJDK ${{ matrix.java } runtime (FCL Android build)" > "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}/version"
+          printf '%s\n' "Android ARM64 OpenJDK ${{ matrix.java }} runtime (FCL Android build)" > "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}/version"
 
       - name: Upload Android ARM64 runtime
         uses: actions/upload-artifact@v4
