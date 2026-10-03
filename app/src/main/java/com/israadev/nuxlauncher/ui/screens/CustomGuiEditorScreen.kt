@@ -65,7 +65,9 @@ private fun KeyboardInputPickerDialog(
             "SHIFT" -> "LEFT SHIFT"
             "[" -> "KURUNG BUKA"
             "]" -> "KURUNG TUTUP"
+            "\\" -> "BACKSLASH"
             ";" -> "SEMICOLON"
+            "'" -> "APOSTROPHE"
             "," -> "COMMA"
             "." -> "PERIOD"
             "/" -> "SLASH"
@@ -129,328 +131,6 @@ private fun KeyboardInputPickerDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    @Composable
-                    fun androidx.compose.foundation.layout.RowScope.KeyButton(
-                        label: String,
-                        weight: Float = 1f,
-                        height: androidx.compose.ui.unit.Dp = 34.dp
-                    ) {
-                        val key = option(label)
-                        Box(
-                            Modifier
-                                .weight(weight)
-                                .height(height)
-                                .clip(RoundedCornerShape(5.dp))
-                                .background(Color(0xFF363636))
-                                .border(1.dp, Color(0xFF494949), RoundedCornerShape(5.dp))
-                                .clickable(enabled = key != null) {
-                                    key?.let(onKeySelected)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                label,
-                                color = Color.White,
-                                fontSize = if (label.length > 6) 7.sp else 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                        }
-                    }
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("ESC","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12")
-                            .forEach { KeyButton(it) }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("1","2","3","4","5","6","7","8","9","0").forEach { KeyButton(it) }
-                        KeyButton("-")
-                        KeyButton("=")
-                        KeyButton("BACKSPACE", 1.8f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyButton("TAB", 1.35f)
-                        listOf("Q","W","E","R","T","Y","U","I","O","P").forEach { KeyButton(it) }
-                        KeyButton("[")
-                        KeyButton("]")
-                        KeyButton("\\")
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyButton("CAPS LOCK", 1.6f)
-                        listOf("A","S","D","F","G","H","J","K","L").forEach { KeyButton(it) }
-                        KeyButton(";")
-                        KeyButton("'")
-                        KeyButton("ENTER", 1.5f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyButton("SHIFT", 1.8f)
-                        listOf("Z","X","C","V","B","N","M").forEach { KeyButton(it) }
-                        KeyButton(",")
-                        KeyButton(".")
-                        KeyButton("/")
-                        KeyButton("SHIFT", 1.8f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        KeyButton("CTRL", 1.2f)
-                        KeyButton("ALT", 1.2f)
-                        KeyButton("SPACE", 5f)
-                        KeyButton("ALT", 1.2f)
-                        KeyButton("CTRL", 1.2f)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf(
-                            "INSERT","HOME","PAGE UP","DELETE","END","PAGE DOWN",
-                            "ARROW UP","ARROW LEFT","ARROW DOWN","ARROW RIGHT"
-                        ).forEach { KeyButton(it, height = 30.dp) }
-                    }
-                }
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(
-                        "Keyboard","GUI","Left Click","Right Click","Mouse",
-                        "Mouse Wheel - Middle Click","Mouse Wheel - Scroll Up",
-                        "Mouse Wheel - Scroll Down","Main Menu","Unspecified"
-                    ).forEach { label ->
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(5.dp))
-                                .background(Color(0xFF303030))
-                                .border(1.dp, Color(0xFF444444), RoundedCornerShape(5.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                label,
-                                color = Color.White,
-                                fontSize = 6.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private typealias KeycodeCatalogKeyOption = com.israadev.nuxlauncher.core.controls.KeyOption
-
-@Composable
-fun CustomGuiEditorScreen(
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val savedButtons by ControlLayoutManager.buttons.collectAsState()
-
-    // Working local copy of buttons for live editing
-    var buttonsList by remember { mutableStateOf(savedButtons.ifEmpty { ControlLayoutManager.getDefaultButtons() }) }
-    var selectedButtonId by remember { mutableStateOf<String?>(null) }
-    var showKeyPickerForButtonId by remember { mutableStateOf<String?>(null) }
-    var keyPickerTargetMode by remember { mutableStateOf("MAIN") } // "MAIN" or "COMBO"
-    var keyPickerSearchQuery by remember { mutableStateOf("") }
-    var showResetConfirmDialog by remember { mutableStateOf(false) }
-    var manualFlipSide by remember { mutableStateOf<Boolean?>(null) }
-
-    LaunchedEffect(Unit) {
-        ControlLayoutManager.init(context)
-        if (ControlLayoutManager.buttons.value.isNotEmpty()) {
-            buttonsList = ControlLayoutManager.buttons.value
-        }
-    }
-
-    LaunchedEffect(savedButtons) {
-        if (savedButtons.isNotEmpty() && buttonsList.isEmpty()) {
-            buttonsList = savedButtons
-        }
-    }
-
-    val selectedButton = remember(buttonsList, selectedButtonId) {
-        buttonsList.firstOrNull { it.id == selectedButtonId }
-    }
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF0E1411))
-    ) {
-        val screenWidthPx = constraints.maxWidth.toFloat()
-        val screenHeightPx = constraints.maxHeight.toFloat()
-        val density = LocalDensity.current
-
-        // 1. Dark Blueprint Dot Grid Canvas (High-Contrast, Sleek Tactical Look)
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val step = 32.dp.toPx()
-            val dotColor = Color(0xFF22362C)
-            var x = step
-            while (x < size.width) {
-                var y = step
-                while (y < size.height) {
-                    drawCircle(dotColor, radius = 1.5.dp.toPx(), center = Offset(x, y))
-                    y += step
-                }
-                x += step
-            }
-
-            // Center guide lines
-            drawLine(
-                color = Color(0xFF22362C).copy(alpha = 0.6f),
-                start = Offset(size.width / 2f, 0f),
-                end = Offset(size.width / 2f, size.height),
-                strokeWidth = 1.dp.toPx()
-            )
-            drawLine(
-                color = Color(0xFF22362C).copy(alpha = 0.6f),
-                start = Offset(0f, size.height / 2f),
-                end = Offset(size.width, size.height / 2f),
-                strokeWidth = 1.dp.toPx()
-            )
-        }
-
-        // 2. Interactive Draggable Buttons on Screen
-        buttonsList.forEach { btn ->
-            val isSelected = btn.id == selectedButtonId
-            val btnWidthPx = with(density) { btn.widthDp.dp.toPx() }
-            val btnHeightPx = with(density) { btn.heightDp.dp.toPx() }
-
-            // Convert percentage coordinates to pixel center
-            val centerX = screenWidthPx * (btn.xPercent / 100f)
-            val centerY = screenHeightPx * (btn.yPercent / 100f)
-
-            val leftPx = (centerX - btnWidthPx / 2f).coerceIn(0f, (screenWidthPx - btnWidthPx).coerceAtLeast(0f))
-            val topPx = (centerY - btnHeightPx / 2f).coerceIn(0f, (screenHeightPx - btnHeightPx).coerceAtLeast(0f))
-
-            val leftDp = with(density) { leftPx.toDp() }
-            val topDp = with(density) { topPx.toDp() }
-
-            val btnBg = if (isSelected) {
-                Color(0xCC10B981)
-            } else if (btn.isSystem) {
-                when (btn.systemAction) {
-                    "FPS" -> Color(0x800A0E17)
-                    "HIDE_GUI" -> Color(0x730A0E17)
-                    "CLOSE" -> Color(0x80EF4444).copy(alpha = 0.35f)
-                    "KEYBOARD" -> Color(0x730A0E17)
-                    else -> Color(0x730A0E17)
-                }
-            } else {
-                Color(0x730A0E17)
-            }
-
-            val btnBorderColor = if (isSelected) {
-                Color(0xFFFFD166)
-            } else if (btn.isSystem) {
-                when (btn.systemAction) {
-                    "HIDE_GUI" -> Color(0x3834D399)
-                    "CLOSE" -> Color(0x80EF4444)
-                    "FPS" -> Color(0x3834D399)
-                    "KEYBOARD" -> Color(0x3834D399)
-                    else -> Color(0x3834D399)
-                }
-            } else {
-                Color(0x3834D399)
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset(x = leftDp, y = topDp)
-                    .size(width = btn.widthDp.dp, height = btn.heightDp.dp)
-                    .alpha(btn.opacity)
-                    .background(btnBg, RoundedCornerShape(btn.cornerRadiusDp.dp))
-                    .border(
-                        if (isSelected) 2.2.dp else 1.5.dp,
-                        btnBorderColor,
-                        RoundedCornerShape(btn.cornerRadiusDp.dp)
-                    )
-                    .pointerInput(btn.id) {
-                        detectTapGestures {
-                            manualFlipSide = null
-                            selectedButtonId = if (selectedButtonId == btn.id) null else btn.id
-                        }
-                    }
-                    .pointerInput(btn.id, screenWidthPx, screenHeightPx) {
-                        detectDragGestures(
-                            onDragStart = {
-                                manualFlipSide = null
-                                selectedButtonId = btn.id
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val currentBtn = buttonsList.firstOrNull { it.id == btn.id } ?: return@detectDragGestures
-                                val curCenterX = screenWidthPx * (currentBtn.xPercent / 100f)
-                                val curCenterY = screenHeightPx * (currentBtn.yPercent / 100f)
-
-                                val newCenterX = (curCenterX + dragAmount.x).coerceIn(btnWidthPx / 2f, screenWidthPx - btnWidthPx / 2f)
-                                val newCenterY = (curCenterY + dragAmount.y).coerceIn(btnHeightPx / 2f, screenHeightPx - btnHeightPx / 2f)
-
-                                val newXPercent = (newCenterX / screenWidthPx) * 100f
-                                val newYPercent = (newCenterY / screenHeightPx) * 100f
-
-                                buttonsList = buttonsList.map {
-                                    if (it.id == btn.id) it.copy(xPercent = newXPercent, yPercent = newYPercent) else it
-                                }
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (btn.isJoystick) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val r = size.minDimension / 2f
-                            val c = Offset(size.width / 2f, size.height / 2f)
-
-                            // Outer ring
-                            drawCircle(
-                                color = if (isSelected) Color(0xFFFFD166) else Color(0x6034D399),
-                                radius = r - 2.dp.toPx(),
-                                center = c,
-                                style = Stroke(width = 2.dp.toPx())
-                            )
-                            // Crosshairs
-                            drawLine(
-                                color = Color(0x3534D399),
-                                start = Offset(c.x, c.y - r * 0.7f),
-                                end = Offset(c.x, c.y + r * 0.7f),
-                                strokeWidth = 1.dp.toPx()
-                            )
-                            drawLine(
-                                color = Color(0x3534D399),
-                                start = Offset(c.x - r * 0.7f, c.y),
-                                end = Offset(c.x + r * 0.7f, c.y),
-                                strokeWidth = 1.dp.toPx()
-                            )
-
-                            // Center knob
-                            val knobRadius = r * 0.38f
-                            drawCircle(
-                                color = if (isSelected) Color(0xCC10B981) else Color(0xCC1B2921),
-                                radius = knobRadius,
-                                center = c
-                            )
-                            drawCircle(
-                                color = if (isSelected) Color(0xFFFFD166) else Color(0xFF34D399),
-                                radius = knobRadius,
-                                center = c,
-                                style = Stroke(width = 1.5.dp.toPx())
-                            )
-                            drawCircle(
-                                color = if (isSelected) Color(0xFF022C22) else Color(0xFF69F0AE),
-                                radius = 3.5.dp.toPx(),
-                                center = c
-                            )
-                        }
-                        Text("W", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp))
-                        Text("S", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
-                        Text("A", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.CenterStart).padding(start = 5.dp))
-                        Text("D", color = Color(0xFF81C784), fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 5.dp))
-                    }
-                } else if (btn.isScroll) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.SpaceBetween,
@@ -1473,4 +1153,34 @@ fun CustomGuiEditorScreen(
             }
         }
     }
+}@Composable
+private fun androidx.compose.foundation.layout.RowScope.KeyboardPickerKeyButton(
+    label: String,
+    key: com.israadev.nuxlauncher.core.controls.KeyOption?,
+    onKeySelected: (com.israadev.nuxlauncher.core.controls.KeyOption) -> Unit,
+    weight: Float = 1f,
+    height: androidx.compose.ui.unit.Dp = 34.dp
+) {
+    Box(
+        Modifier
+            .weight(weight)
+            .height(height)
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color(0xFF363636))
+            .border(1.dp, Color(0xFF494949), RoundedCornerShape(5.dp))
+            .clickable(enabled = key != null) {
+                key?.let(onKeySelected)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = Color.White,
+            fontSize = if (label.length > 6) 7.sp else 9.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    }
 }
+
+
