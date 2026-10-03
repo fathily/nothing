@@ -37,21 +37,21 @@ jobs:
             boot_distribution: ""
 
     name: "Android ARM64 Java ${{ matrix.java }}"
-    runs-on: ${{ matrix.runner }
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout Android OpenJDK builder
         uses: actions/checkout@v4
         with:
           repository: FCL-Team/Android-OpenJDK-Build
-          ref: ${{ matrix.branch }
+          ref: ${{ matrix.branch }}
 
       - name: Set up boot JDK
         if: matrix.boot != ''
         uses: actions/setup-java@v4
         with:
-          distribution: ${{ matrix.boot_distribution }
-          java-version: ${{ matrix.boot }
+          distribution: ${{ matrix.boot_distribution }}
+          java-version: ${{ matrix.boot }}
 
       - name: Download required boot JDK for Java 21/25
         if: matrix.java == '21' || matrix.java == '25'
@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          archive="$(find . -maxdepth 1 -type f -name 'jre${{ matrix.java }-arm64-*.tar.xz' | head -n1)"
+          archive="$(find . -maxdepth 1 -type f -name 'jre${{ matrix.java }}-arm64-*.tar.xz' | head -n1)"
           test -n "$archive"
 
           rm -rf verify
@@ -81,7 +81,7 @@ jobs:
           test -f verify/lib/libjli.so
           test -f verify/lib/server/libjvm.so
 
-          if [ "${{ matrix.java }" = "8" ]; then
+          if [ "${{ matrix.java }}" = "8" ]; then
             test -f verify/jre/lib/rt.jar || test -f verify/lib/rt.jar
           else
             test -f verify/lib/modules
@@ -95,14 +95,14 @@ jobs:
             readelf -h "$so" | grep -E 'Class:.*ELF64|Machine:.*AArch64'
           done
 
-          mkdir -p "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }"
-          cp "$archive" "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }/universal.tar.xz"
-          printf '%s\n' "Android ARM64 OpenJDK ${{ matrix.java } runtime (FCL Android build)" > "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }/version"
+          mkdir -p "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}"
+          cp "$archive" "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}/universal.tar.xz"
+          printf '%s\n' "Android ARM64 OpenJDK ${{ matrix.java } runtime (FCL Android build)" > "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}/version"
 
       - name: Upload Android ARM64 runtime
         uses: actions/upload-artifact@v4
         with:
-          name: temurin-${{ matrix.java }-arm64
+          name: temurin-${{ matrix.java }}-arm64
           path: runtime/temurin-${{ matrix.java }}
 
   package-apk:
