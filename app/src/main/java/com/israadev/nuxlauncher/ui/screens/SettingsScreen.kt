@@ -23,7 +23,9 @@
                                 "jre-21" to "JAVA 21",
                                 "jre-25" to "JAVA 25",
                                 "temurin-8" to "JAVA 8 TEMURIN",
-                                "temurin-17" to "JAVA 17 TEMURIN"
+                                "temurin-17" to "JAVA 17 TEMURIN",
+                                "temurin-21" to "JAVA 21 TEMURIN",
+                                "temurin-25" to "JAVA 25 TEMURIN"
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
