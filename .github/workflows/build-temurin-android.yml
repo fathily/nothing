@@ -15,15 +15,23 @@ jobs:
           - java: "8"
             branch: "Build_JRE_8"
             source: "https://github.com/adoptium/jdk8u"
+            boot_java: "7"
+            boot_distribution: "zulu"
           - java: "17"
             branch: "Build_JRE_17"
             source: "https://github.com/adoptium/jdk17u"
+            boot_java: "17"
+            boot_distribution: "temurin"
           - java: "21"
             branch: "Build_JRE_21"
             source: "https://github.com/adoptium/jdk21u"
+            boot_java: "20"
+            boot_distribution: "temurin"
           - java: "25"
             branch: "Build_JRE_25"
             source: "https://github.com/adoptium/jdk25u"
+            boot_java: "24"
+            boot_distribution: "temurin"
 
     name: "Temurin-derived Android ARM64 Java ${{ matrix.java }}"
     runs-on: ubuntu-22.04
@@ -42,8 +50,8 @@ jobs:
       - name: Set up Temurin build JDK
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: "17"
+          distribution: ${{ matrix.boot_distribution }
+          java-version: "${{ matrix.boot_java }"
 
       - name: Switch builder source to Eclipse Adoptium
         working-directory: android-jdk-builder
