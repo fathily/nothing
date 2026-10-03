@@ -74,6 +74,17 @@ object GameLauncher {
             mcVersion = instance.mcVersion,
             javaMajorVersion = mojangJavaMajor
         )
+
+        // Final safety gate: never enter GameActivity with an incomplete/missing JRE.
+        if (!com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.isRuntimeInstalled(context, runtimeName)) {
+            android.widget.Toast.makeText(
+                context,
+                "Java Runtime belum siap: " + runtimeName + ". Kembali ke Dashboard untuk memperbaikinya.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
         val runtimeHome = com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.getRuntimeHome(context, runtimeName)
 
         // Prepare Android-native LWJGL components
