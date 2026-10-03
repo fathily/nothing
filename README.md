@@ -170,6 +170,21 @@ Proyek ini menggunakan arsitektur pemisahan kredensial yang ketat:
 
 ---
 
+## 🧩 Modifikasi AlfaaBEJIRR
+
+Versi di repositori ini merupakan **modifikasi oleh AlfaaBEJIRR** dari NUX Launcher. Beberapa bagian telah disesuaikan, termasuk tampilan, konfigurasi, dan bagian tertentu dari launcher.
+
+### ⚠️ Catatan APK Crack / Repack
+
+APK yang **di-crack, di-repack, atau dimodifikasi ulang** oleh pihak lain tidak dijamin memiliki konfigurasi yang sama dengan versi ini. Akibatnya, APK tersebut **dapat tidak tersambung atau tidak kompatibel dengan server NUX resmi**, sehingga fitur yang membutuhkan koneksi server mungkin tidak berfungsi.
+
+### 👤 Creator
+
+**AlfaaBEJIRR**  
+TikTok: [@alfathgpp](https://www.tiktok.com/@alfathgpp)
+
+---
+
 ## 📜 Lisensi & Atribusi (Credits)
 
 Proyek ini merupakan perangkat lunak bebas yang dirilis di bawah ketentuan **GNU General Public License v3.0 (GPL-3.0)**.  
