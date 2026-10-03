@@ -48,6 +48,7 @@ import com.israadev.nuxlauncher.core.renderer.NuxRendererRegistry
 import com.israadev.nuxlauncher.core.renderer.NuxRendererPluginManager
 import com.israadev.nuxlauncher.core.renderer.NuxRendererInfo
 import com.israadev.nuxlauncher.core.settings.SettingsManager
+import com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager
 import com.israadev.nuxlauncher.core.utils.NuxVersionUtils
 import com.israadev.nuxlauncher.ui.components.*
 import com.israadev.nuxlauncher.ui.dialogs.NuxRendererV2ConfigDialog
@@ -1019,6 +1020,105 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                        }
+
+                        // Java Runtime Selector
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NuxColors.SurfaceInput)
+                                .border(1.dp, NuxColors.CardBorder, RoundedCornerShape(6.dp))
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Java Runtime",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (defaultRuntime == "auto") {
+                                            "Otomatis sesuai versi Minecraft"
+                                        } else {
+                                            "Paksa gunakan Java ${defaultRuntime.removePrefix("jre-")} untuk instance yang tidak punya override"
+                                        },
+                                        fontSize = 8.5.sp,
+                                        color = NuxColors.GrayNeutral,
+                                        lineHeight = 12.sp
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .background(NuxColors.ForestGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                        .border(1.dp, NuxColors.MintGreen.copy(alpha = 0.45f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = if (defaultRuntime == "auto") "AUTO" else "JAVA ${defaultRuntime.removePrefix("jre-")}",
+                                        color = NuxColors.MintGreen,
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(7.dp))
+
+                            val javaRuntimeOptions = listOf(
+                                "auto" to "AUTO",
+                                "jre-8" to "JAVA 8",
+                                "jre-17" to "JAVA 17",
+                                "jre-21" to "JAVA 21",
+                                "jre-25" to "JAVA 25"
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                javaRuntimeOptions.forEach { (runtimeId, label) ->
+                                    val selected = defaultRuntime.equals(runtimeId, ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(5.dp))
+                                            .background(if (selected) NuxColors.ForestGreen else NuxColors.SurfaceElevated)
+                                            .border(1.dp, if (selected) NuxColors.MintGreen else NuxColors.CardBorder, RoundedCornerShape(5.dp))
+                                            .clickable {
+                                                defaultRuntime = runtimeId
+                                                commitSettings()
+                                                Toast.makeText(
+                                                    context,
+                                                    if (runtimeId == "auto") "Java diatur ke Auto" else "Java diatur ke ${runtimeId.removePrefix("jre-")}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (selected) Color.White else NuxColors.GrayNeutral,
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(5.dp))
+                            Text(
+                                text = "Runtime yang dipilih akan diekstrak otomatis saat diperlukan. Override Java per-instance tetap diprioritaskan.",
+                                fontSize = 8.sp,
+                                color = NuxColors.GrayNeutral,
+                                lineHeight = 11.sp
+                            )
                         }
 
                         // Custom JVM Arguments
