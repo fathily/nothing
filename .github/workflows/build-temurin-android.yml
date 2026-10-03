@@ -53,10 +53,13 @@ jobs:
           distribution: ${{ matrix.boot_distribution }}
           java-version: ${{ matrix.boot }}
 
-      - name: Download required boot JDK for Java 21/25
+      - name: Download branch-specific boot JDK
         if: matrix.java == '21' || matrix.java == '25'
         shell: bash
-        run: bash get_boot_jdk.sh
+        run: |
+          set -euxo pipefail
+          chmod +x get_boot_jdk.sh
+          bash get_boot_jdk.sh
 
       - name: Build Android ARM64 runtime
         shell: bash
@@ -90,9 +93,14 @@ jobs:
           file verify/bin/java
           readelf -h verify/bin/java | grep -E 'Class:.*ELF64|Machine:.*AArch64'
 
+          # Reject a normal Linux/glibc JRE. The runtime must be Android/Bionic.
+          readelf -l verify/bin/java | grep -E '/system/bin/linker64|/apex/com.android.runtime/bin/linker64'
+          ! readelf -d verify/bin/java | grep -q 'libc.so.6'
+
           for so in verify/lib/libjli.so verify/lib/server/libjvm.so; do
             file "$so"
             readelf -h "$so" | grep -E 'Class:.*ELF64|Machine:.*AArch64'
+            ! readelf -d "$so" | grep -q 'libc.so.6'
           done
 
           mkdir -p "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }}"
@@ -167,6 +175,16 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Verify all four Android runtimes are inside the APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apk="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n1)"
+          test -n "$apk"
+          for r in 8 17 21 25; do
+            unzip -l "$apk" | grep -F "assets/runtimes/temurin-$r/universal.tar.xz"
+          done
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
