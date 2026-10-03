@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.israadev.nuxlauncher.core.controls.ControlLayoutManager
 import com.israadev.nuxlauncher.core.controls.KeycodeCatalog
 import com.israadev.nuxlauncher.core.controls.models.CustomControlButton
@@ -48,6 +49,196 @@ import com.israadev.nuxlauncher.ui.theme.NuxSizes
 import com.movtery.inputmap.keycodes.LwjglGlfwKeycode
 import java.util.UUID
 import kotlin.math.roundToInt
+
+
+@Composable
+private fun KeyboardInputPickerDialog(
+    targetId: String,
+    onDismiss: () -> Unit,
+    onKeySelected: (KeycodeCatalogKeyOption) -> Unit
+) {
+    fun option(label: String): com.israadev.nuxlauncher.core.controls.KeyOption? {
+        val query = when (label) {
+            "ESC" -> "ESCAPE"
+            "CTRL" -> "LEFT CONTROL"
+            "ALT" -> "LEFT ALT"
+            "SHIFT" -> "LEFT SHIFT"
+            "[" -> "KURUNG BUKA"
+            "]" -> "KURUNG TUTUP"
+            ";" -> "SEMICOLON"
+            "," -> "COMMA"
+            "." -> "PERIOD"
+            "/" -> "SLASH"
+            "-" -> "MINUS"
+            "=" -> "EQUAL"
+            "ARROW UP" -> "Panah Atas"
+            "ARROW DOWN" -> "Panah Bawah"
+            "ARROW LEFT" -> "Panah Kiri"
+            "ARROW RIGHT" -> "Panah Kanan"
+            else -> label
+        }
+        return KeycodeCatalog.ALL_KEYS.firstOrNull {
+            !it.isMouseButton &&
+            !it.isScroll &&
+            (
+                it.displayName.equals(query, ignoreCase = true) ||
+                it.displayName.startsWith("$query ", ignoreCase = true) ||
+                it.displayName.startsWith("$query (", ignoreCase = true)
+            )
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = true
+        )
+    ) {
+        NuxCard(
+            Modifier
+                .fillMaxWidth(0.97f)
+                .fillMaxHeight(0.94f),
+            backgroundColor = Color(0xFF222222),
+            shadowOffset = 8.dp,
+            cornerRadius = 10.dp
+        ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        "×",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(onClick = onDismiss)
+                    )
+                }
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    @Composable
+                    fun androidx.compose.foundation.layout.RowScope.KeyButton(
+                        label: String,
+                        weight: Float = 1f,
+                        height: androidx.compose.ui.unit.Dp = 34.dp
+                    ) {
+                        val key = option(label)
+                        Box(
+                            Modifier
+                                .weight(weight)
+                                .height(height)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color(0xFF363636))
+                                .border(1.dp, Color(0xFF494949), RoundedCornerShape(5.dp))
+                                .clickable(enabled = key != null) {
+                                    key?.let(onKeySelected)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                color = Color.White,
+                                fontSize = if (label.length > 6) 7.sp else 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("ESC","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12")
+                            .forEach { KeyButton(it) }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("1","2","3","4","5","6","7","8","9","0").forEach { KeyButton(it) }
+                        KeyButton("-")
+                        KeyButton("=")
+                        KeyButton("BACKSPACE", 1.8f)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        KeyButton("TAB", 1.35f)
+                        listOf("Q","W","E","R","T","Y","U","I","O","P").forEach { KeyButton(it) }
+                        KeyButton("[")
+                        KeyButton("]")
+                        KeyButton("\\")
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        KeyButton("CAPS LOCK", 1.6f)
+                        listOf("A","S","D","F","G","H","J","K","L").forEach { KeyButton(it) }
+                        KeyButton(";")
+                        KeyButton("'")
+                        KeyButton("ENTER", 1.5f)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        KeyButton("SHIFT", 1.8f)
+                        listOf("Z","X","C","V","B","N","M").forEach { KeyButton(it) }
+                        KeyButton(",")
+                        KeyButton(".")
+                        KeyButton("/")
+                        KeyButton("SHIFT", 1.8f)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        KeyButton("CTRL", 1.2f)
+                        KeyButton("ALT", 1.2f)
+                        KeyButton("SPACE", 5f)
+                        KeyButton("ALT", 1.2f)
+                        KeyButton("CTRL", 1.2f)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf(
+                            "INSERT","HOME","PAGE UP","DELETE","END","PAGE DOWN",
+                            "ARROW UP","ARROW LEFT","ARROW DOWN","ARROW RIGHT"
+                        ).forEach { KeyButton(it, height = 30.dp) }
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "Keyboard","GUI","Left Click","Right Click","Mouse",
+                        "Mouse Wheel - Middle Click","Mouse Wheel - Scroll Up",
+                        "Mouse Wheel - Scroll Down","Main Menu","Unspecified"
+                    ).forEach { label ->
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color(0xFF303030))
+                                .border(1.dp, Color(0xFF444444), RoundedCornerShape(5.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                color = Color.White,
+                                fontSize = 6.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private typealias KeycodeCatalogKeyOption = com.israadev.nuxlauncher.core.controls.KeyOption
 
 @Composable
 fun CustomGuiEditorScreen(
@@ -1200,215 +1391,39 @@ fun CustomGuiEditorScreen(
         }
     }
 
-    // Keycode Picker Dialog
+    // Keyboard-style Minecraft input picker.
     if (showKeyPickerForButtonId != null) {
-        val targetId = showKeyPickerForButtonId!!
-        val isComboMode = keyPickerTargetMode == "COMBO"
-
-        Dialog(onDismissRequest = {
-            showKeyPickerForButtonId = null
-            keyPickerSearchQuery = ""
-        }) {
-            NuxCard(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .fillMaxHeight(0.88f),
-                backgroundColor = Color(0xFF16201B),
-                shadowOffset = 6.dp,
-                cornerRadius = 16.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isComboMode) "Pilih Tombol Kedua (Kombinasi)" else "Pilih Input Key Minecraft",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Text(
-                                text = if (isComboMode) "Tombol ini akan ditekan bersamaan dengan tombol utama" else "Tersedia semua keyboard A-Z, F1-F12, angka, modifier & simbol",
-                                fontSize = 9.sp,
-                                color = Color(0xFFA5D6A7)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(0xFF3B1E22), CircleShape)
-                                .border(1.dp, Color(0xFF5E2D32), CircleShape)
-                                .clickable {
-                                    showKeyPickerForButtonId = null
-                                    keyPickerSearchQuery = ""
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✕", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFFF8A80))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Search Input Box (Compact, single-line, elegant)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(38.dp)
-                            .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
-                            .border(1.dp, Color(0xFF3B5244), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("🔍", fontSize = 11.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        BasicTextField(
-                            value = keyPickerSearchQuery,
-                            onValueChange = { keyPickerSearchQuery = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
-                            cursorBrush = SolidColor(Color(0xFF69F0AE)),
-                            modifier = Modifier.weight(1f),
-                            decorationBox = { innerTextField ->
-                                if (keyPickerSearchQuery.isEmpty()) {
-                                    Text("Cari key (W, Alt, F3, Tab, Shift...)", color = Color(0xFF6B8A78), fontSize = 10.sp, maxLines = 1)
-                                }
-                                innerTextField()
+        KeyboardInputPickerDialog(
+            targetId = showKeyPickerForButtonId!!,
+            onDismiss = {
+                showKeyPickerForButtonId = null
+                keyPickerSearchQuery = ""
+            },
+            onKeySelected = { option ->
+                val targetId = showKeyPickerForButtonId ?: return@KeyboardInputPickerDialog
+                buttonsList = buttonsList.map {
+                    if (it.id == targetId) {
+                        it.copy(
+                            keyCode = option.keyCode,
+                            isMouseButton = option.isMouseButton,
+                            mouseButton = option.mouseButton,
+                            isScroll = option.isScroll,
+                            name = if (option.isScroll) {
+                                "SCROLL"
+                            } else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") {
+                                option.displayName.substringBefore(" ").take(8)
+                            } else {
+                                it.name
                             }
                         )
-                        if (keyPickerSearchQuery.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .background(Color(0xFF2E3E34), CircleShape)
-                                    .clickable { keyPickerSearchQuery = "" },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("✕", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Key List
-                    val availableKeys = remember(isComboMode) {
-                        if (isComboMode) {
-                            KeycodeCatalog.ALL_KEYS.filter { !it.isScroll && !it.isMouseButton }
-                        } else {
-                            KeycodeCatalog.ALL_KEYS
-                        }
-                    }
-
-                    val filteredKeys = remember(availableKeys, keyPickerSearchQuery) {
-                        if (keyPickerSearchQuery.isBlank()) {
-                            availableKeys
-                        } else {
-                            val q = keyPickerSearchQuery.trim().lowercase()
-                            availableKeys.filter {
-                                it.displayName.lowercase().contains(q) || it.category.lowercase().contains(q)
-                            }
-                        }
-                    }
-
-                    if (filteredKeys.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "Tidak ada tombol yang cocok dengan \"$keyPickerSearchQuery\"",
-                                color = Color(0xFF81C784),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val grouped = filteredKeys.groupBy { it.category }
-                            grouped.forEach { (category, keys) ->
-                                item {
-                                    Text(
-                                        text = category.uppercase(),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF69F0AE),
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                                    )
-                                }
-                                items(keys) { keyOpt ->
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0xFF1F2D25), RoundedCornerShape(8.dp))
-                                            .border(1.dp, Color(0xFF2F4237), RoundedCornerShape(8.dp))
-                                            .clickable {
-                                                buttonsList = buttonsList.map {
-                                                    if (it.id == targetId) {
-                                                        if (isComboMode) {
-                                                            val existing = it.macroComboKeys.ifEmpty {
-                                                                if (it.macroComboKey != 0) listOf(it.macroComboKey) else emptyList()
-                                                            }
-                                                            val updated = existing + keyOpt.keyCode
-                                                            it.copy(macroComboKeys = updated, macroComboKey = updated.firstOrNull() ?: 0)
-                                                        } else {
-                                                            it.copy(
-                                                                keyCode = keyOpt.keyCode,
-                                                                isMouseButton = keyOpt.isMouseButton,
-                                                                mouseButton = keyOpt.mouseButton,
-                                                                isScroll = keyOpt.isScroll,
-                                                                name = if (keyOpt.isScroll) "SCROLL"
-                                                                else if (it.name == "NEW" || it.name == "BTN" || it.name == "SCROLL") {
-                                                                    keyOpt.displayName.substringBefore(" ").take(6)
-                                                                } else it.name
-                                                            )
-                                                        }
-                                                    } else it
-                                                }
-                                                showKeyPickerForButtonId = null
-                                                keyPickerSearchQuery = ""
-                                            }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = keyOpt.displayName,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp,
-                                                color = Color.White
-                                            )
-                                            Text(
-                                                text = keyOpt.category,
-                                                fontWeight = FontWeight.Normal,
-                                                fontSize = 9.sp,
-                                                color = Color(0xFFA5D6A7)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    } else it
                 }
+
+                // Normal keybind: choose once and immediately close the picker.
+                showKeyPickerForButtonId = null
+                keyPickerSearchQuery = ""
             }
-        }
+        )
     }
 
     // Reset Confirmation Dialog
