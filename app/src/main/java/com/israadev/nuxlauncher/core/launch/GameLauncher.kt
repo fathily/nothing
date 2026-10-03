@@ -68,9 +68,12 @@ object GameLauncher {
             }
         }
 
-        val runtimeName = if (instance.javaRuntime != "auto") instance.javaRuntime else {
-            com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.getRecommendedRuntime(instance.mcVersion, mojangJavaMajor)
-        }
+        val runtimeName = com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.resolveRuntimeName(
+            instanceRuntime = instance.javaRuntime,
+            globalRuntime = com.israadev.nuxlauncher.core.settings.SettingsManager.settings.value.defaultJavaRuntime,
+            mcVersion = instance.mcVersion,
+            javaMajorVersion = mojangJavaMajor
+        )
         val runtimeHome = com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager.getRuntimeHome(context, runtimeName)
 
         // Prepare Android-native LWJGL components
