@@ -116,12 +116,32 @@ object JavaRuntimeManager {
         return File(getRuntimeHome(context, runtimeName), "bin/java")
     }
 
+    fun hasRuntimeAssets(context: Context, runtimeName: String): Boolean {
+        return runCatching {
+            val files = context.assets.list("runtimes/$runtimeName") ?: return@runCatching false
+            files.contains("universal.tar.xz")
+        }.getOrDefault(false)
+    }
+
     suspend fun extractRuntime(
         context: Context,
         runtimeName: String,
         onProgress: (String) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
+            val assetPath = "runtimes/$runtimeName"
+
+            // Never create a fake/incomplete runtime directory when the APK does not
+            // actually contain the requested runtime. This is especially important for
+            // optional Android ARM64 runtimes.
+            if (!hasRuntimeAssets(context, runtimeName)) {
+                return@withContext Result.failure(
+                    IllegalStateException(
+                        "Runtime $runtimeName belum tersedia di APK ini"
+                    )
+                )
+            }
+
             val destDir = getRuntimeHome(context, runtimeName)
             if (isRuntimeInstalled(context, runtimeName)) {
                 return@withContext Result.success(destDir)
@@ -131,56 +151,71 @@ object JavaRuntimeManager {
                 destDir.deleteRecursively()
             }
             destDir.mkdirs()
+
             val arch = getDeviceArch()
-            val assetPath = "runtimes/$runtimeName"
 
-            // 1. Unpack universal.tar.xz
-            onProgress("Mengekstrak Java Runtime ($runtimeName universal)...")
-            val universalName = "$assetPath/universal.tar.xz"
-            try {
-                context.assets.open(universalName).use { input ->
-                    unpackTarXz(input, destDir)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            // 1. Unpack the common/full runtime payload.
+            onProgress("Mengekstrak Java Runtime ($runtimeName)...")
+            context.assets.open("$assetPath/universal.tar.xz").use { input ->
+                unpackTarXz(input, destDir)
             }
 
-            // 2. Unpack bin-$arch.tar.xz
-            onProgress("Mengekstrak Java Runtime ($runtimeName bin-$arch)...")
-            val binName = "$assetPath/bin-$arch.tar.xz"
-            try {
-                context.assets.open(binName).use { input ->
+            // 2. Optional architecture overlay. The Android ARM64 builds produced by
+            // FCL already contain the complete ARM64 JRE, so this overlay is optional.
+            val archAsset = "$assetPath/bin-$arch.tar.xz"
+            if (runCatching { context.assets.open(archAsset).close(); true }.getOrDefault(false)) {
+                onProgress("Menerapkan komponen Java $arch...")
+                context.assets.open(archAsset).use { input ->
                     unpackTarXz(input, destDir)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
 
-            // 3. Mark executables
+            // 3. Mark executables/readable files.
+            val binDir = File(destDir, "bin")
+            if (binDir.exists()) {
+                binDir.walkTopDown().forEach { file ->
+                    if (file.isFile) {
+                        file.setExecutable(true, false)
+                        file.setReadable(true, false)
+                    }
+                }
+            }
+
+            val libDir = File(destDir, "lib")
+            if (libDir.exists()) {
+                libDir.walkTopDown().filter { it.isFile && it.extension == "so" }.forEach { so ->
+                    so.setExecutable(true, false)
+                    so.setReadable(true, false)
+                }
+            }
+
             val javaBin = File(destDir, "bin/java")
-            if (javaBin.exists()) {
+            val hasJava = javaBin.exists() && javaBin.isFile
+            if (hasJava) {
                 javaBin.setExecutable(true, false)
                 javaBin.setReadable(true, false)
             }
 
-            File(destDir, "bin").walkTopDown().forEach { bin ->
-                bin.setExecutable(true, false)
-                bin.setReadable(true, false)
-            }
-
-            File(destDir, "lib").walkTopDown().filter { it.extension == "so" }.forEach { so ->
-                so.setExecutable(true, false)
-                so.setReadable(true, false)
-            }
-
-            val hasJava = File(destDir, "bin/java").exists()
             val hasJli = destDir.walkTopDown().any { it.isFile && it.name == "libjli.so" }
             val hasJvm = destDir.walkTopDown().any { it.isFile && it.name == "libjvm.so" }
+
             if (!hasJava || !hasJli || !hasJvm) {
-                return@withContext Result.failure(IllegalStateException("Incomplete $runtimeName runtime: java=$hasJava, libjli=$hasJli, libjvm=$hasJvm"))
+                destDir.deleteRecursively()
+                return@withContext Result.failure(
+                    IllegalStateException(
+                        "Incomplete $runtimeName runtime: java=$hasJava, libjli=$hasJli, libjvm=$hasJvm"
+                    )
+                )
             }
+
             Result.success(destDir)
         } catch (e: Exception) {
+            runCatching {
+                val failedDir = getRuntimeHome(context, runtimeName)
+                if (failedDir.exists() && !isRuntimeInstalled(context, runtimeName)) {
+                    failedDir.deleteRecursively()
+                }
+            }
             Result.failure(e)
         }
     }
