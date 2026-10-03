@@ -266,9 +266,10 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
             val lowEnd = totalRamMb <= 4096 || Runtime.getRuntime().availableProcessors() <= 4
             val autoRatio = when {
                 !settings.autoOptimizeMinecraft -> 1.0f
+                // Reduce framebuffer workload when automatic optimization is enabled.
                 totalRamMb <= 4096 -> 0.75f
-                totalRamMb <= 6144 || lowEnd -> 0.85f
-                else -> 1.0f
+                totalRamMb <= 6144 || lowEnd -> 0.82f
+                else -> 0.90f
             }
             if (settings.autoOptimizeMinecraft) minOf(userRatio, autoRatio) else userRatio
         } else {
@@ -289,6 +290,12 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
             window.setSustainedPerformanceMode(true)
         }
         CallbackBridge.sContext = this
+
+        // Ask Android for the lowest available display post-processing path.
+        // Unsupported displays simply ignore this hint.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setPreferMinimalPostProcessing(true)
+        }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -1175,6 +1182,8 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                     // while explicit-GC suppression avoids avoidable full-GC stalls.
                     jvmArgs.add("-XX:+UseG1GC")
                     jvmArgs.add("-XX:MaxGCPauseMillis=100")
+                    jvmArgs.add("-XX:+ParallelRefProcEnabled")
+                    jvmArgs.add("-XX:G1ReservePercent=15")
                     jvmArgs.add("-XX:+DisableExplicitGC")
                     jvmArgs.add("-XX:+UseStringDeduplication")
                     LoggerBridge.append("▷ [Game Optimize] RAM=${effectiveRamMb}MB, Xms=${effectiveInitialHeapMb}MB, G1GC enabled")
