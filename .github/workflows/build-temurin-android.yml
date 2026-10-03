@@ -1,7 +1,10 @@
-name: Build Temurin-derived Android ARM64 runtimes
+name: Build Android ARM64 Java runtimes for NUX
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build-temurin-android.yml"
 
 permissions:
   contents: read
@@ -14,143 +17,92 @@ jobs:
         include:
           - java: "8"
             branch: "Build_JRE_8"
-            source: "https://github.com/adoptium/jdk8u"
-            boot_java: "7"
+            runner: "ubuntu-22.04"
+            boot: "7"
             boot_distribution: "zulu"
           - java: "17"
             branch: "Build_JRE_17"
-            source: "https://github.com/adoptium/jdk17u"
-            boot_java: "17"
+            runner: "ubuntu-22.04"
+            boot: "17"
             boot_distribution: "temurin"
           - java: "21"
             branch: "Build_JRE_21"
-            source: "https://github.com/adoptium/jdk21u"
-            boot_java: "20"
-            boot_distribution: "temurin"
+            runner: "ubuntu-latest"
+            boot: ""
+            boot_distribution: ""
           - java: "25"
             branch: "Build_JRE_25"
-            source: "https://github.com/adoptium/jdk25u"
-            boot_java: "24"
-            boot_distribution: "temurin"
+            runner: "ubuntu-latest"
+            boot: ""
+            boot_distribution: ""
 
-    name: "Temurin-derived Android ARM64 Java ${{ matrix.java }}"
-    runs-on: ubuntu-22.04
+    name: "Android ARM64 Java ${{ matrix.java }}"
+    runs-on: ${{ matrix.runner }
 
     steps:
-      - name: Checkout launcher
-        uses: actions/checkout@v4
-
       - name: Checkout Android OpenJDK builder
         uses: actions/checkout@v4
         with:
           repository: FCL-Team/Android-OpenJDK-Build
           ref: ${{ matrix.branch }
-          path: android-jdk-builder
 
-      - name: Set up Temurin build JDK
+      - name: Set up boot JDK
+        if: matrix.boot != ''
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.boot_distribution }
-          java-version: "${{ matrix.boot_java }"
+          java-version: ${{ matrix.boot }
 
-      - name: Switch builder source to Eclipse Adoptium
-        working-directory: android-jdk-builder
+      - name: Download required boot JDK for Java 21/25
+        if: matrix.java == '21' || matrix.java == '25'
+        shell: bash
+        run: bash get_boot_jdk.sh
+
+      - name: Build Android ARM64 runtime
         shell: bash
         run: |
           set -euxo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
+          chmod +x ci_build_arch_aarch64.sh
+          bash ci_build_arch_aarch64.sh
 
-          source = os.environ["JDK_SOURCE"]
-          p = Path("clone_jdk.sh")
-          text = p.read_text()
-          lines = text.splitlines()
-          out = []
-          replaced = False
-          for line in lines:
-              if "git clone" in line and "openjdk" in line:
-                  out.append(f'git clone --depth 1 "{source}" openjdk')
-                  replaced = True
-              else:
-                  out.append(line)
-          if not replaced:
-              raise SystemExit("Could not replace upstream JDK clone command")
-          p.write_text("\n".join(out) + "\n")
-
-          p = Path("build_jdk.sh")
-          text = p.read_text()
-          marker = '    --x-libraries=/usr/lib \\\n'
-          extra = (
-              '    --with-vendor-name="Eclipse Temurin (Android)" \\\n'
-              '    --with-vendor-url="https://adoptium.net/" \\\n'
-          )
-          if extra.strip() not in text:
-              if marker not in text:
-                  raise SystemExit("Could not find configure insertion point")
-              text = text.replace(marker, marker + extra, 1)
-              p.write_text(text)
-          PY
-        env:
-          JDK_SOURCE: ${{ matrix.source }
-
-      - name: Build ARM64 Android JRE
-        working-directory: android-jdk-builder
-        run: bash ci_build_arch_aarch64.sh
-
-      - name: Normalize runtime and verify ELF files
+      - name: Verify Android ARM64 runtime
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p "runtime/temurin-${{ matrix.java }}"
 
-          archive="$(find android-jdk-builder -maxdepth 1 -type f -name 'jre${{ matrix.java }}-arm64-*.tar.xz' | head -n1)"
+          archive="$(find . -maxdepth 1 -type f -name 'jre${{ matrix.java }-arm64-*.tar.xz' | head -n1)"
           test -n "$archive"
 
-          mkdir -p work
-          tar -xJf "$archive" -C work
+          rm -rf verify
+          mkdir verify
+          tar -xJf "$archive" -C verify
 
-          test -x work/bin/java
-          test -f work/lib/libjli.so || test -f work/lib/jli/libjli.so
-          test -f work/lib/server/libjvm.so || test -f work/lib/aarch64/server/libjvm.so
+          test -x verify/bin/java
+          test -f verify/lib/libjli.so
+          test -f verify/lib/server/libjvm.so
 
-          file work/bin/java
-          find work -name '*.so' -print0 | xargs -0 -r file
-
-          mkdir -p universal
-          cp -a work/. universal/
-          rm -rf universal/bin universal/release universal/lib/jexec universal/lib/server
-          find universal/lib -type f -name '*.so' -delete
-          rm -rf universal/lib/aarch64
-
-          mkdir -p arm64
-          cp -a work/bin arm64/
-          if [ "${{ matrix.java }}" = "8" ]; then
-            mkdir -p arm64/lib
-            cp -a work/lib/aarch64 arm64/lib/
+          if [ "${{ matrix.java }" = "8" ]; then
+            test -f verify/jre/lib/rt.jar || test -f verify/lib/rt.jar
           else
-            mkdir -p arm64/lib
-            cp -a work/lib/server arm64/lib/
-            find work/lib -maxdepth 1 -type f -name '*.so' -exec cp {} arm64/lib/ \;
-          fi
-          if [ -e work/lib/jexec ]; then
-            cp -a work/lib/jexec arm64/lib/
-          fi
-          if [ -e work/release ]; then
-            cp -a work/release arm64/
+            test -f verify/lib/modules
           fi
 
-          tar -cJf "runtime/temurin-${{ matrix.java }}/universal.tar.xz" -C universal .
-          tar -cJf "runtime/temurin-${{ matrix.java }}/bin-arm64.tar.xz" -C arm64 .
-          printf '%s\n' "Temurin-derived Android ARM64 Java ${{ matrix.java }}" > "runtime/temurin-${{ matrix.java }}/version"
+          file verify/bin/java
+          readelf -h verify/bin/java | grep -E 'Class:.*ELF64|Machine:.*AArch64'
 
-          test -s "runtime/temurin-${{ matrix.java }}/universal.tar.xz"
-          test -s "runtime/temurin-${{ matrix.java }}/bin-arm64.tar.xz"
+          for so in verify/lib/libjli.so verify/lib/server/libjvm.so; do
+            file "$so"
+            readelf -h "$so" | grep -E 'Class:.*ELF64|Machine:.*AArch64'
+          done
 
-      - name: Upload runtime
+          mkdir -p "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }"
+          cp "$archive" "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }/universal.tar.xz"
+          printf '%s\n' "Android ARM64 OpenJDK ${{ matrix.java } runtime (FCL Android build)" > "$GITHUB_WORKSPACE/runtime/temurin-${{ matrix.java }/version"
+
+      - name: Upload Android ARM64 runtime
         uses: actions/upload-artifact@v4
         with:
-          name: temurin-${{ matrix.java }}-arm64
+          name: temurin-${{ matrix.java }-arm64
           path: runtime/temurin-${{ matrix.java }}
 
   package-apk:
@@ -185,6 +137,17 @@ jobs:
           name: temurin-25-arm64
           path: app/src/main/assets/runtimes/temurin-25
 
+      - name: Verify runtime assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for r in 8 17 21 25; do
+            test -s "app/src/main/assets/runtimes/temurin-$r/universal.tar.xz"
+            tar -tJf "app/src/main/assets/runtimes/temurin-$r/universal.tar.xz" | grep -E '^\./?bin/java$|^bin/java$'
+            tar -tJf "app/src/main/assets/runtimes/temurin-$r/universal.tar.xz" | grep 'lib/libjli.so'
+            tar -tJf "app/src/main/assets/runtimes/temurin-$r/universal.tar.xz" | grep 'lib/server/libjvm.so'
+          done
+
       - name: Verify NUX runtimes are untouched
         shell: bash
         run: |
@@ -200,7 +163,7 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Build debug APK with Temurin Android runtimes
+      - name: Build debug APK with Android ARM64 runtimes
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon
@@ -208,6 +171,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: nux-launcher-debug-with-temurin-arm64
+          name: nux-launcher-debug-with-android-arm64-java-8-17-21-25
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
