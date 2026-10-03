@@ -501,8 +501,17 @@ fun DashboardScreen() {
                                                                 downloadMessage = "Menyiapkan OpenJDK (${JavaRuntimeManager.getRuntimeDisplayName(targetRuntime)})..."
 
                                                                 scope.launch {
-                                                                    JavaRuntimeManager.extractRuntime(context, targetRuntime) { msg ->
+                                                                    val runtimeResult = JavaRuntimeManager.extractRuntime(context, targetRuntime) { msg ->
                                                                         downloadMessage = msg
+                                                                    }
+                                                                    if (runtimeResult.isFailure) {
+                                                                        isDownloading = false
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Java Runtime tidak tersedia: ${runtimeResult.exceptionOrNull()?.localizedMessage}",
+                                                                            Toast.LENGTH_LONG
+                                                                        ).show()
+                                                                        return@launch
                                                                     }
 
                                                                     val res = downloader.downloadInstance(inst) { p, msg ->
