@@ -1,5 +1,4 @@
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
@@ -23,8 +22,8 @@ android {
         applicationId = "com.israadev.nuxlauncher"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.0.9"
 
         buildConfigField("String", "SERVER_BASE_URL", "\"$rawServerUrl\"")
 
@@ -38,9 +37,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("nuxRelease") {
+            storeFile = rootProject.file("signing/nux-release.jks")
+            storePassword = System.getenv("NUX_KEYSTORE_PASSWORD") ?: "nuxlauncher2026"
+            keyAlias = System.getenv("NUX_KEY_ALIAS") ?: "nuxlauncher"
+            keyPassword = System.getenv("NUX_KEY_PASSWORD") ?: "nuxlauncher2026"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("nuxRelease")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
