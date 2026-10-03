@@ -36,20 +36,24 @@ object JavaRuntimeManager {
 
     fun isRuntimeInstalled(context: Context, runtimeName: String): Boolean {
         val home = getRuntimeHome(context, runtimeName)
+        if (!home.exists() || !home.isDirectory) return false
+
         val javaBin = File(home, "bin/java")
-        val releaseFile = File(home, "release")
+        if (!javaBin.exists()) return false
+        if (!javaBin.canExecute()) javaBin.setExecutable(true, false)
 
-        // A runtime is only usable when the Java executable AND native
-        // launcher libraries are present. A previous partial extraction can
-        // leave bin/java behind while libjli/libjvm are missing, which causes
-        // GameActivity to fail at JLI_Launch with "libjli.so not found".
-        val hasJli = home.walkTopDown().any { it.isFile && it.name == "libjli.so" }
-        val hasJvm = home.walkTopDown().any { it.isFile && it.name == "libjvm.so" }
+        val jliFile = if (File(home, "lib/jli/libjli.so").exists()) File(home, "lib/jli/libjli.so") else File(home, "lib/libjli.so")
+        if (!jliFile.exists()) return false
 
-        return home.exists() &&
-            (javaBin.exists() || releaseFile.exists()) &&
-            hasJli &&
-            hasJvm
+        val jvmFile = File(home, "lib/server/libjvm.so")
+        val clientJvmFile = File(home, "lib/client/libjvm.so")
+        if (!jvmFile.exists() && !clientJvmFile.exists()) return false
+
+        val modulesFile = File(home, "lib/modules")
+        val rtJar = File(home, "lib/rt.jar")
+        if (!modulesFile.exists() && !rtJar.exists()) return false
+
+        return true
     }
 
     /**
@@ -135,8 +139,14 @@ object JavaRuntimeManager {
                 javaBin.setReadable(true, false)
             }
 
-            File(destDir, "bin").listFiles()?.forEach { bin ->
+            File(destDir, "bin").walkTopDown().forEach { bin ->
                 bin.setExecutable(true, false)
+                bin.setReadable(true, false)
+            }
+
+            File(destDir, "lib").walkTopDown().filter { it.extension == "so" }.forEach { so ->
+                so.setExecutable(true, false)
+                so.setReadable(true, false)
             }
 
             val hasJava = File(destDir, "bin/java").exists()
@@ -153,7 +163,7 @@ object JavaRuntimeManager {
 
     private fun unpackTarXz(inputStream: InputStream, destDir: File) {
         TarArchiveInputStream(XZCompressorInputStream(inputStream)).use { tarIn ->
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(32768)
             var entry = tarIn.nextEntry
             while (entry != null) {
                 val targetFile = File(destDir, entry.name)
