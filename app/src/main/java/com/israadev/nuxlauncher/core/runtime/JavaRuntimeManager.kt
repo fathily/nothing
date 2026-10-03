@@ -106,6 +106,8 @@ object JavaRuntimeManager {
             "jre-25" -> "Java 25 (Auto)"
             "temurin-8" -> "Java 8 Temurin"
             "temurin-17" -> "Java 17 Temurin"
+            "temurin-21" -> "Java 21 Temurin"
+            "temurin-25" -> "Java 25 Temurin"
             else -> runtimeName.uppercase()
         }
     }
