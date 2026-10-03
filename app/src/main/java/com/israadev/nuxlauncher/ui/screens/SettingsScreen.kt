@@ -48,7 +48,6 @@ import com.israadev.nuxlauncher.core.renderer.NuxRendererRegistry
 import com.israadev.nuxlauncher.core.renderer.NuxRendererPluginManager
 import com.israadev.nuxlauncher.core.renderer.NuxRendererInfo
 import com.israadev.nuxlauncher.core.settings.SettingsManager
-import com.israadev.nuxlauncher.core.runtime.JavaRuntimeManager
 import com.israadev.nuxlauncher.core.utils.NuxVersionUtils
 import com.israadev.nuxlauncher.ui.components.*
 import com.israadev.nuxlauncher.ui.dialogs.NuxRendererV2ConfigDialog
