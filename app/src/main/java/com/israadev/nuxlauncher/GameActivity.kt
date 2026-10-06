@@ -838,6 +838,15 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                 Os.setenv("POJAV_SDL_REUSE_WINDOW", "1", true)
                 Os.setenv("SDL_OPENGL_LIBRARY", glLibPath, true)
 
+                // Keep shader/extension compatibility enabled for modern Android renderers.
+                // Legacy GL4ES 2.x remains unchanged.
+                val isPureLegacyGl4es = targetRenderer.id == "gl4es" || targetRenderer.rendererId == "opengles2"
+                if (!isPureLegacyGl4es) {
+                    Os.setenv("allow_higher_compat_version", "true", true)
+                    Os.setenv("allow_glsl_extension_directive_midshader", "true", true)
+                    Os.setenv("force_glsl_extensions_warn", "true", true)
+                }
+
                 // Apply renderer specific environment variables
                 targetRenderer.envVariables.forEach { (k, v) ->
                     Os.setenv(k, v, true)
