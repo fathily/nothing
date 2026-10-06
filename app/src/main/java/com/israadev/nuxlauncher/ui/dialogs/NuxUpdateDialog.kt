@@ -259,6 +259,30 @@ fun NuxUpdateDialog(
                         )
                     }
 
+                    if (updateInfo.isUpdateAvailable && !updateInfo.forkReady) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0x22F59E0B), RoundedCornerShape(8.dp))
+                                .border(1.dp, Color(0x55F59E0B), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = if (updateInfo.forkVersion.isBlank()) {
+                                    "Jangan update dulu. Versi terbaru server NUX belum tersedia di fork GitHub Alfaa. Tunggu fork diperbarui agar tidak memasang APK yang belum disesuaikan."
+                                } else {
+                                    "Jangan update dulu. Server sudah " + updateInfo.version + ", tetapi fork GitHub baru " + updateInfo.forkVersion + ". Tunggu fork disinkronkan terlebih dahulu."
+                                },
+                                color = Color(0xFFFCD34D),
+                                fontSize = 9.sp,
+                                lineHeight = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Buttons
@@ -286,10 +310,12 @@ fun NuxUpdateDialog(
 
                         NuxButton(
                             onClick = {
-                                UpdateManager.openDownloadUrl(context, updateInfo.downloadUrl)
+                                // The official server decides whether an update exists;
+                                // the actual install/update path is always the fork release page.
+                                UpdateManager.openDownloadUrl(context, UpdateManager.FORK_RELEASES_URL)
                                 onDismiss()
                             },
-                            backgroundColor = NuxColors.ForestGreen,
+                            backgroundColor = if (updateInfo.isUpdateAvailable) NuxColors.ForestGreen else NuxColors.SurfaceInput,
                             contentColor = Color.White,
                             cornerRadius = 8.dp,
                             modifier = Modifier.height(32.dp)
@@ -302,7 +328,7 @@ fun NuxUpdateDialog(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (updateInfo.isUpdateAvailable) "UNDUH PEMBARUAN" else "UNDUH ULANG APK",
+                                text = "BUKA FORK GITHUB",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp,
                                 color = Color.White
