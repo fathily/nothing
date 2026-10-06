@@ -33,5 +33,10 @@ data class LauncherSettings(
     // Hero Banner Animation (Video MP4)
     val heroAnimationEnabled: Boolean = false,
     val heroAnimationVideoPath: String = "",
-    val heroAnimationRotation: Int = 0 // 0, 90, 180, 270
+    val heroAnimationRotation: Int = 0, // 0, 90, 180, 270
+
+    // AI Crash Analytics
+    val aiAutoAnalyze: Boolean = true,
+    val aiApiKey: String = "",
+    val aiModel: String = ""
 )
