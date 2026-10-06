@@ -74,7 +74,9 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK" | head -40
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK" | head -40
 
       - name: Prepare release APK
         run: cp app/build/outputs/apk/release/app-release.apk "NuxLauncher-${RELEASE_TAG}.apk"
