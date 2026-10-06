@@ -24,10 +24,16 @@ data class AndroidUpdateInfo(
     val fileName: String,
     val fileSize: Long,
     val changelog: String,
-    val isUpdateAvailable: Boolean
+    val isUpdateAvailable: Boolean,
+    val forkVersion: String = "",
+    val forkReady: Boolean = false
 )
 
 object UpdateManager {
+    const val FORK_REPOSITORY_URL = "https://github.com/fathily/nothing"
+    const val FORK_RELEASES_URL = "https://github.com/fathily/nothing/releases/latest"
+    private const val FORK_RELEASE_ENDPOINT = "https://api.github.com/repos/fathily/nothing/releases/latest"
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(6, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
@@ -157,6 +163,12 @@ object UpdateManager {
                     val newerCode = remoteCode > 0 && remoteCode > localCode
                     val newerVersion = compareVersions(remoteVersion, localVersion) > 0
 
+                    // Keep the official NUX server as the source of truth for the
+                    // notification, but never send a fork user to an old APK.
+                    val forkVersion = fetchForkReleaseVersion()
+                    val forkReady = forkVersion.isNotBlank() &&
+                        compareVersions(forkVersion, remoteVersion) >= 0
+
                     return@withContext Result.success(
                         AndroidUpdateInfo(
                             code = remoteCode,
@@ -168,7 +180,9 @@ object UpdateManager {
                             fileName = fileName,
                             fileSize = fileSize,
                             changelog = changelog,
-                            isUpdateAvailable = newerCode || newerVersion
+                            isUpdateAvailable = newerCode || newerVersion,
+                            forkVersion = forkVersion,
+                            forkReady = forkReady
                         )
                     )
                 }
@@ -178,6 +192,26 @@ object UpdateManager {
         }
 
         Result.failure(lastError ?: Exception("Gagal memeriksa pembaruan NUX."))
+    }
+
+    private fun fetchForkReleaseVersion(): String {
+        return try {
+            val request = Request.Builder()
+                .url(FORK_RELEASE_ENDPOINT)
+                .header("User-Agent", "NUX-Launcher-Fork")
+                .header("Accept", "application/vnd.github+json")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return ""
+                val root = JsonParser.parseString(response.body.string()).asJsonObject
+                root.get("tag_name")?.takeUnless { it.isJsonNull }?.asString
+                    ?.trim()?.removePrefix("v") ?: ""
+            }
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     private fun compareVersions(first: String, second: String): Int {
