@@ -28,6 +28,7 @@ jobs:
         run: chmod +x ./gradlew
 
       # Build the same debug-signed variant used by the existing CI.
+      # Release branch: v1.0.9
       # This keeps the APK installable without introducing a new signing key.
       - name: Build APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
