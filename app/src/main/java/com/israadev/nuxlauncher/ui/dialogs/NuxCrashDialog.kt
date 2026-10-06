@@ -61,6 +61,13 @@ fun NuxCrashDialog(
 
     fun runAiAnalysis() {
         rightViewMode = "ai"
+        if (!com.israadev.nuxlauncher.core.crash.AICrashQuotaManager.hasQuota(context, settings)) {
+            aiState = com.israadev.nuxlauncher.core.crash.AIStreamState.Error(
+                "Kuota AI harian habis (5/5). VIP memiliki akses Unlimited."
+            )
+            return
+        }
+        com.israadev.nuxlauncher.core.crash.AICrashQuotaManager.consumeQuota(context, settings)
         coroutineScope.launch {
             com.israadev.nuxlauncher.core.crash.AICrashAnalyzer.analyzeCrashStreaming(crashInfo, settings).collect { state ->
                 aiState = state
