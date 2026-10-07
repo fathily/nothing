@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       tag:
@@ -21,6 +23,7 @@ concurrency:
 jobs:
   release:
     name: Build and publish signed release APK
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
 
     env:
@@ -28,7 +31,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.0.10' }}
 
     steps:
       - name: Checkout source
@@ -86,13 +89,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          printf '%s\n' '## NUX Launcher v1.0.10' '' '### What is New' '- Added AI Crash Analyst integration.' '- VIP accounts now have unlimited AI Crash Analyst usage.' '- Free accounts keep the 5 analyses/day limit.' '- Personal AI API keys remain unlimited.' '- Added streaming AI crash-analysis support.' '- Improved release signing and publishing workflow.' '' '### Notes' '- VIP unlimited applies to the app local daily quota.' '- AI providers may still enforce their own rate limits.' > release-notes.md
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             gh release upload "${RELEASE_TAG}" "NuxLauncher-${RELEASE_TAG}.apk" --clobber
+            gh release edit "${RELEASE_TAG}" --title "NUX Launcher ${RELEASE_TAG}" --notes-file release-notes.md
           else
-            gh release create "${RELEASE_TAG}" "NuxLauncher-${RELEASE_TAG}.apk" \
-              --target "${GITHUB_SHA}" \
-              --title "NUX Launcher ${RELEASE_TAG}" \
-              --generate-notes
+            gh release create "${RELEASE_TAG}" "NuxLauncher-${RELEASE_TAG}.apk" --target "${GITHUB_SHA}" --title "NUX Launcher ${RELEASE_TAG}" --notes-file release-notes.md
           fi
 
       - name: Remove temporary keystore
