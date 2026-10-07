@@ -1,0 +1,68 @@
+name: NUX Launcher v1.0.10 Release
+
+on:
+  push:
+    paths:
+      - ".github/workflows/release-v1.0.10.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build and publish v1.0.10 APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Build APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Verify APK
+        run: |
+          set -e
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose "$APK" | head -40
+          cp "$APK" "NuxLauncher-v1.0.10.apk"
+
+      - name: Publish v1.0.10
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cat > release-notes.md <<'EOF'
+          ## NUX Launcher v1.0.10
+
+          ### What is New
+          - Added AI Crash Analyst integration.
+          - VIP accounts have unlimited AI Crash Analyst usage.
+          - Free accounts keep the 5 analyses/day limit.
+          - Personal AI API keys remain unlimited.
+          - Added streaming AI crash-analysis support.
+          - Improved release publishing workflow.
+
+          ### Build note
+          - This APK is signed with the GitHub Actions debug signing key because stable release signing secrets are not configured.
+          - If another NUX APK is installed with a different signing key, Android may require that version to be uninstalled first.
+          EOF
+
+          if gh release view v1.0.10 >/dev/null 2>&1; then
+            gh release upload v1.0.10 NuxLauncher-v1.0.10.apk --clobber
+            gh release edit v1.0.10 --title "NUX Launcher v1.0.10" --notes-file release-notes.md
+          else
+            gh release create v1.0.10 NuxLauncher-v1.0.10.apk               --target "$GITHUB_SHA"               --title "NUX Launcher v1.0.10"               --notes-file release-notes.md
+          fi
