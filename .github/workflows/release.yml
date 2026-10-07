@@ -130,3 +130,5 @@ jobs:
       - name: Remove temporary keystore
         if: always()
         run: rm -f "${ANDROID_KEYSTORE_PATH}"
+
+# v1.0.10 release build
