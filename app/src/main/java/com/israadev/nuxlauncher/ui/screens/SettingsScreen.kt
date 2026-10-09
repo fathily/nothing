@@ -1022,7 +1022,114 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Java Runtime Selector\n                        val androidRuntimeIds = listOf("temurin-8", "temurin-17", "temurin-21", "temurin-25")\n                        val androidRuntimeAvailable = remember {\n                            androidRuntimeIds.associateWith { runtimeId ->\n                                runCatching {\n                                    context.assets.list("runtimes/" + runtimeId)\n                                        ?.contains("universal.tar.xz") == true\n                                }.getOrDefault(false)\n                            }\n                        }\n\n                        LaunchedEffect(defaultRuntime) {\n                            if (defaultRuntime in androidRuntimeIds &&\n                                androidRuntimeAvailable[defaultRuntime] != true\n                            ) {\n                                defaultRuntime = "auto"\n                                commitSettings()\n                            }\n                        }\n\n                        fun runtimeSummary(runtimeId: String): String {\n                            return when {\n                                runtimeId == "auto" -> "AUTO"\n                                runtimeId.startsWith("temurin-") ->\n                                    "ANDROID " + runtimeId.removePrefix("temurin-")\n                                else ->\n                                    "JAVA " + runtimeId.removePrefix("jre-")\n                            }\n                        }\n\n                        fun runtimeSubtitle(runtimeId: String): String {\n                            return when {\n                                runtimeId == "auto" ->\n                                    "Otomatis mengikuti kebutuhan Java Minecraft"\n                                runtimeId.startsWith("temurin-") ->\n                                    if (androidRuntimeAvailable[runtimeId] == true) {\n                                        "Runtime Android ARM64 siap dipakai"\n                                    } else {\n                                        "Belum ada di APK ini"\n                                    }\n                                else -> "Runtime NUX bawaan"\n                            }\n                        }\n\n                        Column(\n                            modifier = Modifier\n                                .fillMaxWidth()\n                                .clip(RoundedCornerShape(6.dp))\n                                .background(NuxColors.SurfaceInput)\n                                .border(1.dp, NuxColors.CardBorder, RoundedCornerShape(6.dp))\n                                .padding(10.dp)\n                        ) {\n                            Row(\n                                modifier = Modifier.fillMaxWidth(),\n                                horizontalArrangement = Arrangement.SpaceBetween,\n                                verticalAlignment = Alignment.CenterVertically\n                            ) {\n                                Column(modifier = Modifier.weight(1f)) {\n                                    Text(\n                                        text = "Java Runtime",\n                                        fontSize = 11.sp,\n                                        fontWeight = FontWeight.Bold,\n                                        color = Color.White\n                                    )\n                                    Text(\n                                        text = runtimeSubtitle(defaultRuntime),\n                                        fontSize = 8.5.sp,\n                                        color = NuxColors.GrayNeutral,\n                                        lineHeight = 12.sp\n                                    )\n                                }\n\n                                Box(\n                                    modifier = Modifier\n                                        .background(\n                                            NuxColors.ForestGreen.copy(alpha = 0.15f),\n                                            RoundedCornerShape(4.dp)\n                                        )\n                                        .border(\n                                            1.dp,\n                                            NuxColors.MintGreen.copy(alpha = 0.45f),\n                                            RoundedCornerShape(4.dp)\n                                        )\n                                        .padding(horizontal = 7.dp, vertical = 4.dp)\n                                ) {\n                                    Text(\n                                        text = runtimeSummary(defaultRuntime),\n                                        color = NuxColors.MintGreen,\n                                        fontSize = 8.5.sp,\n                                        fontWeight = FontWeight.Bold\n                                    )\n                                }\n                            }\n\n                            Spacer(modifier = Modifier.height(8.dp))\n\n                            Text(\n                                text = "NUX RUNTIME",\n                                color = NuxColors.GrayNeutral,\n                                fontSize = 7.5.sp,\n                                fontWeight = FontWeight.Bold,\n                                letterSpacing = 0.7.sp\n                            )\n                            Spacer(modifier = Modifier.height(4.dp))\n\n                            Row(\n                                modifier = Modifier.fillMaxWidth(),\n                                horizontalArrangement = Arrangement.spacedBy(5.dp)\n                            ) {\n                                listOf(\n                                    "auto" to "AUTO",\n                                    "jre-8" to "JAVA 8",\n                                    "jre-17" to "JAVA 17",\n                                    "jre-21" to "JAVA 21",\n                                    "jre-25" to "JAVA 25"\n                                ).forEach { (runtimeId, label) ->\n                                    val selected = defaultRuntime.equals(runtimeId, ignoreCase = true)\n\n                                    Box(\n                                        modifier = Modifier\n                                            .weight(1f)\n                                            .height(34.dp)\n                                            .clip(RoundedCornerShape(5.dp))\n                                            .background(if (selected) NuxColors.ForestGreen else NuxColors.SurfaceElevated)\n                                            .border(\n                                                1.dp,\n                                                if (selected) NuxColors.MintGreen else NuxColors.CardBorder,\n                                                RoundedCornerShape(5.dp)\n                                            )\n                                            .clickable {\n                                                defaultRuntime = runtimeId\n                                                commitSettings()\n                                                Toast.makeText(\n                                                    context,\n                                                    "Java diatur ke " + runtimeSummary(runtimeId),\n                                                    Toast.LENGTH_SHORT\n                                                ).show()\n                                            },\n                                        contentAlignment = Alignment.Center\n                                    ) {\n                                        Text(\n                                            text = label,\n                                            color = if (selected) Color.White else NuxColors.GrayNeutral,\n                                            fontSize = 8.sp,\n                                            fontWeight = FontWeight.Bold,\n                                            maxLines = 1\n                                        )\n                                    }\n                                }\n                            }\n\n                            Spacer(modifier = Modifier.height(8.dp))\n\n                            Row(\n                                modifier = Modifier.fillMaxWidth(),\n                                verticalAlignment = Alignment.CenterVertically\n                            ) {\n                                Text(\n                                    text = "ANDROID ARM64",\n                                    color = NuxColors.MintGreen,\n                                    fontSize = 7.5.sp,\n                                    fontWeight = FontWeight.Bold,\n                                    letterSpacing = 0.7.sp\n                                )\n                                Spacer(modifier = Modifier.width(6.dp))\n                                Text(\n                                    text = "Java 8 · 17 · 21 · 25",\n                                    color = NuxColors.GrayNeutral,\n                                    fontSize = 7.5.sp\n                                )\n                            }\n\n                            Spacer(modifier = Modifier.height(4.dp))\n\n                            Row(\n                                modifier = Modifier.fillMaxWidth(),\n                                horizontalArrangement = Arrangement.spacedBy(5.dp)\n                            ) {\n                                androidRuntimeIds.forEach { runtimeId ->\n                                    val available = androidRuntimeAvailable[runtimeId] == true\n                                    val selected = defaultRuntime.equals(runtimeId, ignoreCase = true)\n\n                                    Box(\n                                        modifier = Modifier\n                                            .weight(1f)\n                                            .height(34.dp)\n                                            .clip(RoundedCornerShape(5.dp))\n                                            .background(\n                                                when {\n                                                    selected -> NuxColors.ForestGreen\n                                                    available -> NuxColors.SurfaceElevated\n                                                    else -> NuxColors.SurfaceElevated.copy(alpha = 0.55f)\n                                                }\n                                            )\n                                            .border(\n                                                1.dp,\n                                                when {\n                                                    selected -> NuxColors.MintGreen\n                                                    available -> NuxColors.CardBorder\n                                                    else -> NuxColors.CardBorder.copy(alpha = 0.45f)\n                                                },\n                                                RoundedCornerShape(5.dp)\n                                            )\n                                            .clickable(enabled = available) {\n                                                defaultRuntime = runtimeId\n                                                commitSettings()\n                                                Toast.makeText(\n                                                    context,\n                                                    "Android ARM64 Java " + runtimeId.removePrefix("temurin-") + " dipilih",\n                                                    Toast.LENGTH_SHORT\n                                                ).show()\n                                            },\n                                        contentAlignment = Alignment.Center\n                                    ) {\n                                        Text(\n                                            text = "JAVA " + runtimeId.removePrefix("temurin-"),\n                                            color = when {\n                                                selected -> Color.White\n                                                available -> NuxColors.GrayNeutral\n                                                else -> NuxColors.GrayNeutral.copy(alpha = 0.45f)\n                                            },\n                                            fontSize = 8.sp,\n                                            fontWeight = FontWeight.Bold,\n                                            maxLines = 1\n                                        )\n                                    }\n                                }\n                            }\n\n                            Spacer(modifier = Modifier.height(5.dp))\n                            Text(\n                                text = "Runtime Android ARM64 hanya bisa dipilih jika paket APK menyertakannya. NUX runtime tetap tidak diubah.",\n                                fontSize = 8.sp,\n                                color = NuxColors.GrayNeutral,\n                                lineHeight = 11.sp\n                            )\n                        }\n\n                        // Custom JVM Arguments
+                        // Java Runtime Selector
+                        val runtimeOptions = listOf(
+                            "auto" to "AUTO",
+                            "jre-8" to "JAVA 8",
+                            "jre-17" to "JAVA 17",
+                            "jre-21" to "JAVA 21",
+                            "jre-25" to "JAVA 25"
+                        )
+
+                        fun runtimeSummary(runtimeId: String): String =
+                            if (runtimeId == "auto") "AUTO" else "JAVA " + runtimeId.removePrefix("jre-")
+
+                        fun runtimeSubtitle(runtimeId: String): String =
+                            if (runtimeId == "auto") {
+                                "Otomatis mengikuti versi Java yang dibutuhkan Minecraft"
+                            } else {
+                                "Java " + runtimeId.removePrefix("jre-") + " akan dipakai secara global"
+                            }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NuxColors.SurfaceInput)
+                                .border(1.dp, NuxColors.CardBorder, RoundedCornerShape(6.dp))
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Java Runtime Global",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = runtimeSubtitle(defaultRuntime),
+                                        fontSize = 8.5.sp,
+                                        color = NuxColors.GrayNeutral,
+                                        lineHeight = 12.sp
+                                    )
+                                }
+                                Text(
+                                    text = runtimeSummary(defaultRuntime),
+                                    color = NuxColors.MintGreen,
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .background(NuxColors.ForestGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                        .border(1.dp, NuxColors.MintGreen.copy(alpha = 0.45f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                runtimeOptions.forEach { (runtimeId, label) ->
+                                    val selected = defaultRuntime.equals(runtimeId, ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(36.dp)
+                                            .clip(RoundedCornerShape(5.dp))
+                                            .background(if (selected) NuxColors.ForestGreen else NuxColors.SurfaceElevated)
+                                            .border(
+                                                1.dp,
+                                                if (selected) NuxColors.MintGreen else NuxColors.CardBorder,
+                                                RoundedCornerShape(5.dp)
+                                            )
+                                            .clickable {
+                                                defaultRuntime = runtimeId
+                                                commitSettings()
+                                                Toast.makeText(
+                                                    context,
+                                                    if (runtimeId == "auto") "Java diatur ke otomatis" else "Java global diatur ke " + runtimeId.removePrefix("jre-"),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (selected) Color.White else NuxColors.GrayNeutral,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Pilihan Java 8/17/21/25 berlaku global saat dipilih. AUTO memakai rekomendasi tiap versi Minecraft. Runtime akan disiapkan dari aset APK saat dibutuhkan.",
+                                fontSize = 8.sp,
+                                color = NuxColors.GrayNeutral,
+                                lineHeight = 11.sp
+                            )
+                        }
+
+                        // Custom JVM Arguments
                         Column {
                             Text(
                                 text = "Custom JVM Arguments (Opsional)",
