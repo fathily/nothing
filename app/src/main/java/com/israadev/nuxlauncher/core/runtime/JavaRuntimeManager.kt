@@ -79,9 +79,10 @@ object JavaRuntimeManager {
     }
 
     /**
-     * Resolves the runtime for an instance using this precedence:
-     * instance override -> global Settings runtime -> Minecraft recommendation.
-     * "auto" means let NUX choose the recommended Java for the Minecraft version.
+     * Resolves the runtime for an instance.
+     * An explicit global Settings selection is authoritative, so selecting Java 21
+     * really uses Java 21 for every instance/version. If global is AUTO, an explicit
+     * per-instance choice wins; otherwise use the Minecraft recommendation.
      */
     fun resolveRuntimeName(
         instanceRuntime: String?,
@@ -89,11 +90,11 @@ object JavaRuntimeManager {
         mcVersion: String,
         javaMajorVersion: Int? = null
     ): String {
-        val instance = instanceRuntime?.trim()?.lowercase().orEmpty()
-        if (instance.isNotBlank() && instance != "auto") return instanceRuntime!!.trim()
-
         val global = globalRuntime?.trim()?.lowercase().orEmpty()
         if (global.isNotBlank() && global != "auto") return globalRuntime!!.trim()
+
+        val instance = instanceRuntime?.trim()?.lowercase().orEmpty()
+        if (instance.isNotBlank() && instance != "auto") return instanceRuntime!!.trim()
 
         return getRecommendedRuntime(mcVersion, javaMajorVersion)
     }
