@@ -33,7 +33,7 @@ object AICrashAnalyzer {
             ""
         }
     }
-    const val DEFAULT_MODEL = "qwen/qwen3.8-27b:free"
+    const val DEFAULT_MODEL = "openrouter/free"
     private const val OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
     private val httpClient by lazy {
@@ -53,7 +53,15 @@ object AICrashAnalyzer {
 
     fun getEffectiveModel(settings: LauncherSettings?): String {
         val userModel = settings?.aiModel?.trim() ?: ""
-        return if (userModel.isNotBlank()) userModel else DEFAULT_MODEL
+        if (userModel.isBlank()) return DEFAULT_MODEL
+
+        // Migrate the previously configured Qwen free slug when OpenRouter marks
+        // that specific free variant unavailable for the account/provider.
+        return if (userModel.equals("qwen/qwen3.8-27b:free", ignoreCase = true)) {
+            DEFAULT_MODEL
+        } else {
+            userModel
+        }
     }
 
     /**
