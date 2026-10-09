@@ -1,26 +1,23 @@
-name: Android Build
+name: Android Debug APK Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Keep only the newest build for the branch. Rapid UI/performance commits
-# should not leave a pile of redundant APK builds running in parallel.
 concurrency:
-  group: android-build-${{ github.ref }}
+  group: android-debug-test-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build and verify debug APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,9 +35,23 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
 
-      - name: Upload debug APK
+      - name: Verify APK exists and is signed
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          mkdir -p build-test-output
+          cp "$APK" build-test-output/NUX-debug-test.apk
+          sha256sum build-test-output/NUX-debug-test.apk | tee build-test-output/SHA256SUMS.txt
+
+      - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: nux-launcher-debug
-          path: "app/build/outputs/apk/debug/*.apk"
+          name: nux-debug-test-${{ github.run_number }}
+          path: build-test-output/*
           if-no-files-found: error
+          retention-days: 14
