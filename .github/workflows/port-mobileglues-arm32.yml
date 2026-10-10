@@ -173,28 +173,28 @@ jobs:
           set -euxo pipefail
           TAG="v1.1.3-arm32-test.1"
           cat > release-notes.md <<'EOF'
-          ## NUX Launcher — MobileGlues ARM32 test build
+          ## NUX Launcher — Pengujian MobileGlues ARM32
 
-          ### Changelog
-          - Added a MobileGlues renderer build for Android `armeabi-v7a` (32-bit ARM).
-          - Packaged the newly built `libmobileglues.so` into the ARM32 APK.
-          - Produced separate universal, ARM64-only, and ARM32-only debug APKs.
-          - Included the MobileGlues port bundle, license, build information, and SHA-256 checksums.
+          ### Catatan perubahan
+          - Menambahkan build renderer MobileGlues untuk Android `armeabi-v7a` (ARM 32-bit).
+          - Memasukkan `libmobileglues.so` hasil build ke dalam APK ARM32.
+          - Menyediakan APK debug terpisah: universal, khusus ARM64, dan khusus ARM32.
+          - Menyertakan paket port MobileGlues, lisensi, informasi build, dan checksum SHA-256.
 
-          ### Download files
-          - `apk-universal.apk` — APK containing supported ABIs.
-          - `apk-arm64.apk` — APK for 64-bit ARM devices.
-          - `apk-armeabi32.apk` — APK for 32-bit ARM devices.
-          - `mobileglues-port.zip` — ARM32 MobileGlues library, license, and build info.
-          - `MobileGlues-LICENSE` — upstream license.
-          - `ARM32-BUILD-INFO.txt` — build target information.
-          - `SHA256SUMS.txt` — checksums for APKs and port bundle.
+          ### Berkas unduhan
+          - `apk-universal.apk` — APK dengan ABI yang didukung.
+          - `apk-arm64.apk` — APK untuk perangkat ARM 64-bit.
+          - `apk-armeabi32.apk` — APK untuk perangkat ARM 32-bit.
+          - `mobileglues-port.zip` — pustaka MobileGlues ARM32, lisensi, dan informasi build.
+          - `MobileGlues-LICENSE` — lisensi dari proyek sumber.
+          - `ARM32-BUILD-INFO.txt` — informasi target build.
+          - `SHA256SUMS.txt` — checksum untuk APK dan paket port.
 
-          ### Important test status
-          - CI compilation, APK packaging, APK signature checks, and ABI contents checks must pass before publication.
-          - Minecraft has not yet been tested on a real ARM32 device; successful launch and rendering are not guaranteed.
-          - This is a prerelease/test build, not a stable release.
-          - APKs are debug-signed. If Android reports a signature conflict, do not uninstall until launcher/game data is backed up.
+          ### Status pengujian
+          - Kompilasi CI, pengemasan APK, pemeriksaan tanda tangan APK, dan pemeriksaan isi ABI telah berhasil sebelum rilis ini diterbitkan.
+          - Minecraft belum diuji langsung pada perangkat ARM32; keberhasilan menjalankan game dan render grafis belum dijamin.
+          - Ini adalah versi pra-rilis untuk pengujian, bukan rilis stabil.
+          - APK ditandatangani dengan kunci debug. Jika Android melaporkan konflik tanda tangan, jangan hapus aplikasi sebelum data launcher dan game dicadangkan.
           EOF
 
           if gh release view "$TAG" --repo fathily/nothing >/dev/null 2>&1; then
