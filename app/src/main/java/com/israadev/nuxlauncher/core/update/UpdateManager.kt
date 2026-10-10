@@ -41,157 +41,88 @@ object UpdateManager {
         .build()
 
     suspend fun checkForUpdate(context: Context): Result<AndroidUpdateInfo> = withContext(Dispatchers.IO) {
-        val endpoints = buildList {
-            add(NuxConfig.UPDATE_ENDPOINT)
-            if (NuxConfig.isConfigured && NuxConfig.UPDATE_ENDPOINT != NuxConfig.OFFICIAL_UPDATE_ENDPOINT) {
-                add(NuxConfig.OFFICIAL_UPDATE_ENDPOINT)
-            }
-        }.filter { it.isNotBlank() }.distinct()
+        // This is a forked launcher: only its own GitHub Releases can determine
+        // whether an APK update exists. The upstream NUX server may be ahead and
+        // must never trigger an update prompt for an APK that the fork has not built.
+        try {
+            val request = Request.Builder()
+                .url(FORK_RELEASE_ENDPOINT)
+                .header("User-Agent", "NUX-Launcher-Fork")
+                .header("Accept", "application/vnd.github+json")
+                .get()
+                .build()
 
-        if (endpoints.isEmpty()) {
-            return@withContext Result.failure(Exception("Server pembaruan NUX belum tersedia."))
-        }
-
-        var lastError: Exception? = null
-
-        for (endpoint in endpoints) {
-            try {
-                val request = Request.Builder()
-                    .url(endpoint)
-                    .header("User-Agent", "NuxLauncher-Android/1.0.5")
-                    .header("Accept", "application/json")
-                    .get()
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        lastError = Exception("Server HTTP " + response.code)
-                        return@use
-                    }
-
-                    val root = JsonParser.parseString(response.body.string()).asJsonObject
-                    val isGithubRelease = root.has("tag_name") && root.has("assets")
-
-                    val remoteVersion = if (isGithubRelease) {
-                        root.get("tag_name")?.asString?.trim()?.removePrefix("v") ?: "1.0.0"
-                    } else {
-                        root.get("version")?.takeUnless { it.isJsonNull }?.asString?.trim()?.removePrefix("v")
-                            ?: "1.0.0"
-                    }
-
-                    val remoteCode = if (!isGithubRelease) {
-                        root.get("code")?.takeUnless { it.isJsonNull }?.asInt ?: 1
-                    } else {
-                        0
-                    }
-
-                    val createdAt = if (isGithubRelease) {
-                        root.get("published_at")?.asString ?: ""
-                    } else {
-                        root.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: ""
-                    }
-
-                    var downloadUrl = NuxConfig.getDownloadUrl("uploads/installers/NuxLauncher.apk")
-                    var fileName = "NuxLauncher-Android.apk"
-                    var fileSize = 0L
-
-                    if (isGithubRelease) {
-                        val assets = root.getAsJsonArray("assets")
-                        for (element in assets) {
-                            val asset = element.asJsonObject
-                            val name = asset.get("name")?.asString ?: continue
-                            if (name.endsWith(".apk", ignoreCase = true)) {
-                                downloadUrl = asset.get("browser_download_url")?.asString ?: downloadUrl
-                                fileName = name
-                                fileSize = asset.get("size")?.asLong ?: 0L
-                                break
-                            }
-                        }
-                    } else {
-                        val files = root.get("files")
-                        if (files != null && files.isJsonArray && files.asJsonArray.size() > 0) {
-                            val file = files.asJsonArray[0].asJsonObject
-                            file.get("uri")?.takeUnless { it.isJsonNull }?.asString?.let {
-                                downloadUrl = NuxConfig.getDownloadUrl(it)
-                            }
-                            file.get("file_name")?.takeUnless { it.isJsonNull }?.asString?.let {
-                                fileName = it
-                            }
-                            file.get("size")?.takeUnless { it.isJsonNull }?.asLong?.let {
-                                fileSize = it
-                            }
-                        }
-                    }
-
-                    var changelog = if (isGithubRelease) {
-                        root.get("body")?.asString ?: ""
-                    } else {
-                        ""
-                    }
-
-                    if (changelog.isBlank()) {
-                        root.get("default_body")?.takeIf { it.isJsonObject }?.asJsonObject?.get("markdown")
-                            ?.takeUnless { it.isJsonNull }?.asString?.let { changelog = it }
-
-                        if (changelog.isBlank()) {
-                            root.get("bodies")?.takeIf { it.isJsonArray }?.asJsonArray?.let { bodies ->
-                                if (bodies.size() > 0) {
-                                    bodies[0].asJsonObject.get("markdown")
-                                        ?.takeUnless { it.isJsonNull }?.asString?.let { changelog = it }
-                                }
-                            }
-                        }
-                    }
-
-                    if (changelog.isBlank()) {
-                        changelog = "• Pembaruan NUX Launcher tersedia.\n• Peningkatan performa dan stabilitas."
-                    }
-
-                    val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        context.packageManager.getPackageInfo(
-                            context.packageName,
-                            PackageManager.PackageInfoFlags.of(0)
-                        )
-                    } else {
-                        @Suppress("DEPRECATION")
-                        context.packageManager.getPackageInfo(context.packageName, 0)
-                    }
-
-                    val localCode = PackageInfoCompat.getLongVersionCode(packageInfo)
-                    val localVersion = (packageInfo.versionName ?: "1.0.5").trim().removePrefix("v")
-
-                    val newerCode = remoteCode > 0 && remoteCode > localCode
-                    val newerVersion = compareVersions(remoteVersion, localVersion) > 0
-
-                    // Keep the official NUX server as the source of truth for the
-                    // notification, but never send a fork user to an old APK.
-                    val forkVersion = fetchForkReleaseVersion()
-                    val forkReady = forkVersion.isNotBlank() &&
-                        compareVersions(forkVersion, remoteVersion) >= 0
-
-                    return@withContext Result.success(
-                        AndroidUpdateInfo(
-                            code = remoteCode,
-                            version = remoteVersion,
-                            localVersion = localVersion,
-                            localCode = localCode,
-                            createdAt = createdAt,
-                            downloadUrl = downloadUrl,
-                            fileName = fileName,
-                            fileSize = fileSize,
-                            changelog = changelog,
-                            isUpdateAvailable = newerCode || newerVersion,
-                            forkVersion = forkVersion,
-                            forkReady = forkReady
-                        )
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(
+                        Exception("Gagal memeriksa GitHub Releases (HTTP ${response.code}). Coba lagi nanti.")
                     )
                 }
-            } catch (e: Exception) {
-                lastError = e
-            }
-        }
 
-        Result.failure(lastError ?: Exception("Gagal memeriksa pembaruan NUX."))
+                val root = JsonParser.parseString(response.body.string()).asJsonObject
+                val remoteVersion = root.get("tag_name")?.takeUnless { it.isJsonNull }?.asString
+                    ?.trim()?.removePrefix("v")
+                    ?.takeIf { it.isNotBlank() }
+                    ?: return@withContext Result.failure(Exception("Tag versi GitHub tidak ditemukan."))
+
+                val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getPackageInfo(
+                        context.packageName,
+                        PackageManager.PackageInfoFlags.of(0)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                }
+
+                val localCode = PackageInfoCompat.getLongVersionCode(packageInfo)
+                val localVersion = (packageInfo.versionName ?: "1.0.0").trim().removePrefix("v")
+
+                var downloadUrl = FORK_RELEASES_URL
+                var fileName = "APK dari GitHub Releases"
+                var fileSize = 0L
+                val assets = root.get("assets")
+                if (assets != null && assets.isJsonArray) {
+                    for (element in assets.asJsonArray) {
+                        if (!element.isJsonObject) continue
+                        val asset = element.asJsonObject
+                        val name = asset.get("name")?.takeUnless { it.isJsonNull }?.asString ?: continue
+                        if (name.endsWith(".apk", ignoreCase = true)) {
+                            downloadUrl = asset.get("browser_download_url")
+                                ?.takeUnless { it.isJsonNull }?.asString ?: FORK_RELEASES_URL
+                            fileName = name
+                            fileSize = asset.get("size")?.takeUnless { it.isJsonNull }?.asLong ?: 0L
+                            break
+                        }
+                    }
+                }
+
+                var changelog = root.get("body")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                if (changelog.isBlank()) {
+                    changelog = "• Pembaruan NUX Launcher fork tersedia di GitHub Releases."
+                }
+
+                val updateAvailable = compareVersions(remoteVersion, localVersion) > 0
+                Result.success(
+                    AndroidUpdateInfo(
+                        code = 0,
+                        version = remoteVersion,
+                        localVersion = localVersion,
+                        localCode = localCode,
+                        createdAt = root.get("published_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty(),
+                        downloadUrl = downloadUrl,
+                        fileName = fileName,
+                        fileSize = fileSize,
+                        changelog = changelog,
+                        isUpdateAvailable = updateAvailable,
+                        forkVersion = remoteVersion,
+                        forkReady = true
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal memeriksa versi fork di GitHub: ${e.localizedMessage ?: "koneksi bermasalah"}", e))
+        }
     }
 
     private fun fetchForkReleaseVersion(): String {
