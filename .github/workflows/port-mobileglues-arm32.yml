@@ -126,3 +126,78 @@ jobs:
         with:
           name: nux-arm32-mobileglues-test-apk
           path: NUX-ARM32-MobileGlues-test.apk
+
+  publish-arm32-prerelease:
+    name: Publish ARM32 test prerelease
+    needs: package-arm32-apk
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download ARM32 APK
+        uses: actions/download-artifact@v4
+        with:
+          name: nux-arm32-mobileglues-test-apk
+          path: release-files
+
+      - name: Download ARM32 native library and license
+        uses: actions/download-artifact@v4
+        with:
+          name: mobileglues-arm32-native
+          path: release-files/native
+
+      - name: Package native library bundle
+        run: |
+          set -euxo pipefail
+          cd release-files
+          zip -r MobileGlues-ARM32-native.zip native/armeabi-v7a/libmobileglues.so native/MobileGlues-LICENSE native/BUILD-INFO.txt
+          mv native/MobileGlues-LICENSE ./MobileGlues-LICENSE
+          mv native/BUILD-INFO.txt ./ARM32-BUILD-INFO.txt
+          rm -rf native
+
+      - name: Publish GitHub prerelease with changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          TAG="v1.1.3-arm32-test.1"
+          cat > release-notes.md <<'EOF'
+          ## NUX Launcher — MobileGlues ARM32 test build
+
+          ### Changelog
+          - Built MobileGlues renderer for Android `armeabi-v7a` (32-bit ARM).
+          - Packaged `libmobileglues.so` into the NUX debug APK under `lib/armeabi-v7a/`.
+          - Verified the renderer ELF is 32-bit ARM and checked the APK signature.
+          - Included the native library bundle, upstream MobileGlues license, and build information.
+
+          ### Important test status
+          - CI compilation, APK packaging, signature verification, and renderer-ABI checks passed.
+          - Minecraft has **not yet been tested on a real ARM32 device**; successful launch and in-game rendering are not guaranteed.
+          - This is a **prerelease/test APK**, not a stable release.
+          - The APK uses the GitHub Actions debug signing key. If Android reports a signature conflict, back up launcher/game data before considering an uninstall.
+
+          ### Files
+          - `NUX-ARM32-MobileGlues-test.apk` — test APK.
+          - `MobileGlues-ARM32-native.zip` — ARM32 renderer, license, and build info.
+          - `MobileGlues-LICENSE` — upstream license text.
+          - `ARM32-BUILD-INFO.txt` — target ABI and Android API information.
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              release-files/NUX-ARM32-MobileGlues-test.apk \
+              release-files/MobileGlues-ARM32-native.zip \
+              release-files/MobileGlues-LICENSE \
+              release-files/ARM32-BUILD-INFO.txt --clobber
+            gh release edit "$TAG" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease
+          else
+            gh release create "$TAG" \
+              release-files/NUX-ARM32-MobileGlues-test.apk \
+              release-files/MobileGlues-ARM32-native.zip \
+              release-files/MobileGlues-LICENSE \
+              release-files/ARM32-BUILD-INFO.txt \
+              --target "$GITHUB_SHA" \
+              --title "NUX Launcher — MobileGlues ARM32 Test" \
+              --notes-file release-notes.md \
+              --prerelease
+          fi
