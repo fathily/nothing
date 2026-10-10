@@ -126,6 +126,9 @@ jobs:
           build_variant() {
             local label="$1"
             local abi_list="$2"
+            # Reset the original Gradle file before each ABI variant.
+            # Otherwise the second variant replaces the filter and the third cannot find the original line.
+            cp /tmp/build.gradle.kts.original "$GRADLE_FILE"
             python3 - "$GRADLE_FILE" "$abi_list" <<'PY'
           import pathlib, sys
           path = pathlib.Path(sys.argv[1])
