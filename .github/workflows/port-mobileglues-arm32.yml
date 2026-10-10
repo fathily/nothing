@@ -72,11 +72,14 @@ jobs:
         with:
           name: mobileglues-arm32-native
           path: out/
+          if-no-files-found: error
 
-  package-arm32-apk:
-    name: Package ARM32 test APK
+  package-and-publish:
+    name: Build APK variants and publish prerelease
     needs: build-arm32-renderer
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout NUX fork
         uses: actions/checkout@v4
@@ -107,53 +110,58 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Build ARM32-capable debug APK
+      - name: Build universal, ARM64, and ARM32 APKs
         run: |
           set -euxo pipefail
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
-          APK="app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$APK"
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          "$APKSIGNER" verify "$APK"
-          unzip -l "$APK" | grep 'lib/armeabi-v7a/libmobileglues.so'
-          unzip -p "$APK" lib/armeabi-v7a/libmobileglues.so > /tmp/libmobileglues.so
-          readelf -h /tmp/libmobileglues.so | grep -E 'Class:.*ELF32|Machine:.*ARM'
-          cp "$APK" NUX-ARM32-MobileGlues-test.apk
+          mkdir -p release-files
+          GRADLE_FILE="app/build.gradle.kts"
+          cp "$GRADLE_FILE" /tmp/build.gradle.kts.original
 
-      - name: Upload ARM32 test APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: nux-arm32-mobileglues-test-apk
-          path: NUX-ARM32-MobileGlues-test.apk
+          restore_gradle() {
+            cp /tmp/build.gradle.kts.original "$GRADLE_FILE"
+          }
+          trap restore_gradle EXIT
 
-  publish-arm32-prerelease:
-    name: Publish ARM32 test prerelease
-    needs: package-arm32-apk
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - name: Download ARM32 APK
-        uses: actions/download-artifact@v4
-        with:
-          name: nux-arm32-mobileglues-test-apk
-          path: release-files
+          build_variant() {
+            local label="$1"
+            local abi_list="$2"
+            python3 - "$GRADLE_FILE" "$abi_list" <<'PY'
+          import pathlib, sys
+          path = pathlib.Path(sys.argv[1])
+          abi_list = sys.argv[2]
+          text = path.read_text()
+          old = 'abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))'
+          new = f'abiFilters.addAll(listOf({abi_list}))'
+          if text.count(old) != 1:
+              raise SystemExit("Could not safely locate the ABI filter line")
+          path.write_text(text.replace(old, new, 1))
+          PY
+            ./gradlew clean assembleDebug --stacktrace --no-daemon
+            local apk="app/build/outputs/apk/debug/app-debug.apk"
+            test -s "$apk"
+            local apksigner
+            apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+            "$apksigner" verify "$apk"
+            cp "$apk" "release-files/$label.apk"
+          }
 
-      - name: Download ARM32 native library and license
-        uses: actions/download-artifact@v4
-        with:
-          name: mobileglues-arm32-native
-          path: release-files/native
+          build_variant "apk-universal" '"arm64-v8a", "armeabi-v7a", "x86", "x86_64"'
+          build_variant "apk-arm64" '"arm64-v8a"'
+          build_variant "apk-armeabi32" '"armeabi-v7a"'
+          restore_gradle
+          trap - EXIT
 
-      - name: Package native library bundle
-        run: |
-          set -euxo pipefail
+          unzip -l release-files/apk-universal.apk | grep 'lib/armeabi-v7a/libmobileglues.so'
+          unzip -l release-files/apk-arm64.apk | grep 'lib/arm64-v8a/'
+          unzip -l release-files/apk-armeabi32.apk | grep 'lib/armeabi-v7a/libmobileglues.so'
+          ! unzip -l release-files/apk-armeabi32.apk | grep -q 'lib/arm64-v8a/'
+          cp ported-renderer/armeabi-v7a/libmobileglues.so release-files/libmobileglues-arm32.so
+          cp ported-renderer/MobileGlues-LICENSE release-files/MobileGlues-LICENSE
+          cp ported-renderer/BUILD-INFO.txt release-files/ARM32-BUILD-INFO.txt
           cd release-files
-          zip -r MobileGlues-ARM32-native.zip native/armeabi-v7a/libmobileglues.so native/MobileGlues-LICENSE native/BUILD-INFO.txt
-          mv native/MobileGlues-LICENSE ./MobileGlues-LICENSE
-          mv native/BUILD-INFO.txt ./ARM32-BUILD-INFO.txt
-          rm -rf native
+          zip -r mobileglues-port.zip libmobileglues-arm32.so MobileGlues-LICENSE ARM32-BUILD-INFO.txt
+          sha256sum apk-universal.apk apk-arm64.apk apk-armeabi32.apk mobileglues-port.zip > SHA256SUMS.txt
 
       - name: Publish GitHub prerelease with changelog
         env:
@@ -165,39 +173,30 @@ jobs:
           ## NUX Launcher — MobileGlues ARM32 test build
 
           ### Changelog
-          - Built MobileGlues renderer for Android `armeabi-v7a` (32-bit ARM).
-          - Packaged `libmobileglues.so` into the NUX debug APK under `lib/armeabi-v7a/`.
-          - Verified the renderer ELF is 32-bit ARM and checked the APK signature.
-          - Included the native library bundle, upstream MobileGlues license, and build information.
+          - Added a MobileGlues renderer build for Android `armeabi-v7a` (32-bit ARM).
+          - Packaged the newly built `libmobileglues.so` into the ARM32 APK.
+          - Produced separate universal, ARM64-only, and ARM32-only debug APKs.
+          - Included the MobileGlues port bundle, license, build information, and SHA-256 checksums.
+
+          ### Download files
+          - `apk-universal.apk` — APK containing supported ABIs.
+          - `apk-arm64.apk` — APK for 64-bit ARM devices.
+          - `apk-armeabi32.apk` — APK for 32-bit ARM devices.
+          - `mobileglues-port.zip` — ARM32 MobileGlues library, license, and build info.
+          - `MobileGlues-LICENSE` — upstream license.
+          - `ARM32-BUILD-INFO.txt` — build target information.
+          - `SHA256SUMS.txt` — checksums for APKs and port bundle.
 
           ### Important test status
-          - CI compilation, APK packaging, signature verification, and renderer-ABI checks passed.
-          - Minecraft has **not yet been tested on a real ARM32 device**; successful launch and in-game rendering are not guaranteed.
-          - This is a **prerelease/test APK**, not a stable release.
-          - The APK uses the GitHub Actions debug signing key. If Android reports a signature conflict, back up launcher/game data before considering an uninstall.
-
-          ### Files
-          - `NUX-ARM32-MobileGlues-test.apk` — test APK.
-          - `MobileGlues-ARM32-native.zip` — ARM32 renderer, license, and build info.
-          - `MobileGlues-LICENSE` — upstream license text.
-          - `ARM32-BUILD-INFO.txt` — target ABI and Android API information.
+          - CI compilation, APK packaging, APK signature checks, and ABI contents checks must pass before publication.
+          - Minecraft has not yet been tested on a real ARM32 device; successful launch and rendering are not guaranteed.
+          - This is a prerelease/test build, not a stable release.
+          - APKs are debug-signed. If Android reports a signature conflict, do not uninstall until launcher/game data is backed up.
           EOF
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              release-files/NUX-ARM32-MobileGlues-test.apk \
-              release-files/MobileGlues-ARM32-native.zip \
-              release-files/MobileGlues-LICENSE \
-              release-files/ARM32-BUILD-INFO.txt --clobber
-            gh release edit "$TAG" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease
+          if gh release view "$TAG" --repo fathily/nothing >/dev/null 2>&1; then
+            gh release upload "$TAG" release-files/apk-universal.apk release-files/apk-arm64.apk release-files/apk-armeabi32.apk release-files/mobileglues-port.zip release-files/MobileGlues-LICENSE release-files/ARM32-BUILD-INFO.txt release-files/SHA256SUMS.txt --clobber --repo fathily/nothing
+            gh release edit "$TAG" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease --repo fathily/nothing
           else
-            gh release create "$TAG" \
-              release-files/NUX-ARM32-MobileGlues-test.apk \
-              release-files/MobileGlues-ARM32-native.zip \
-              release-files/MobileGlues-LICENSE \
-              release-files/ARM32-BUILD-INFO.txt \
-              --target "$GITHUB_SHA" \
-              --title "NUX Launcher — MobileGlues ARM32 Test" \
-              --notes-file release-notes.md \
-              --prerelease
+            gh release create "$TAG" release-files/apk-universal.apk release-files/apk-arm64.apk release-files/apk-armeabi32.apk release-files/mobileglues-port.zip release-files/MobileGlues-LICENSE release-files/ARM32-BUILD-INFO.txt release-files/SHA256SUMS.txt --target "$GITHUB_SHA" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease --repo fathily/nothing
           fi
