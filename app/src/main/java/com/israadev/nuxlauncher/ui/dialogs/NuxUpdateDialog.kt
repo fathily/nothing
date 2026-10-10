@@ -112,7 +112,7 @@ fun NuxUpdateDialog(
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
-                                    text = if (updateInfo.isUpdateAvailable) "Versi baru siap diunduh" else "Aplikasi sudah menggunakan versi terkini",
+                                    text = if (updateInfo.isUpdateAvailable) "Rilis fork baru tersedia di GitHub" else "Versi fork sudah paling baru",
                                     color = NuxColors.GrayNeutral,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Normal
@@ -157,7 +157,7 @@ fun NuxUpdateDialog(
                         ) {
                             Column {
                                 Text(
-                                    text = "VERSI SERVER",
+                                    text = "VERSI GITHUB FORK",
                                     color = NuxColors.GrayNeutral,
                                     fontSize = 8.5.sp,
                                     fontWeight = FontWeight.SemiBold,
