@@ -1659,11 +1659,18 @@ fun GameScreen(
             val btnWidthPx = with(density) { btn.widthDp.dp.toPx() }
             val btnHeightPx = with(density) { btn.heightDp.dp.toPx() }
 
-            val centerX = screenWidth * (btn.xPercent / 100f)
-            val centerY = screenHeight * (btn.yPercent / 100f)
+            // Virtual controls use the same letterboxed game viewport as the
+            // SurfaceView, not the full device-sized Compose overlay. This keeps
+            // their visual positions aligned when using 4:3, 16:9, or custom modes.
+            val centerX = renderLeftPx + renderWidthPx * (btn.xPercent / 100f)
+            val centerY = renderTopPx + renderHeightPx * (btn.yPercent / 100f)
 
-            val leftPx = (centerX - btnWidthPx / 2f).coerceIn(0f, (screenWidth - btnWidthPx).coerceAtLeast(0f))
-            val topPx = (centerY - btnHeightPx / 2f).coerceIn(0f, (screenHeight - btnHeightPx).coerceAtLeast(0f))
+            val minLeft = renderLeftPx
+            val maxLeft = (renderLeftPx + renderWidthPx - btnWidthPx).coerceAtLeast(minLeft)
+            val minTop = renderTopPx
+            val maxTop = (renderTopPx + renderHeightPx - btnHeightPx).coerceAtLeast(minTop)
+            val leftPx = (centerX - btnWidthPx / 2f).coerceIn(minLeft, maxLeft)
+            val topPx = (centerY - btnHeightPx / 2f).coerceIn(minTop, maxTop)
 
             val leftDp = with(density) { leftPx.toDp() }
             val topDp = with(density) { topPx.toDp() }
