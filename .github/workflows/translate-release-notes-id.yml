@@ -1,0 +1,107 @@
+name: Translate all release notes to Indonesian
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/translate-release-notes-id.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  translate-release-notes:
+    name: Update all published release descriptions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Translate every existing release changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p notes
+
+          cat > notes/v1.1.3.md <<'EOF'
+          ## NUX Launcher v1.1.3
+
+          ### Perubahan
+          - Memperbaiki posisi dan perataan kontrol virtual agar sesuai dengan area tampilan game Minecraft.
+          - Menyamakan posisi editor Custom GUI dengan kontrol di dalam game.
+          - Memulihkan pemilih runtime Java: AUTO, Java 8, Java 17, Java 21, dan Java 25.
+          - Pemilihan Java global kini diprioritaskan untuk semua instance.
+          - Memperbaiki pemilihan model gratis pada AI Crash Analyst.
+          - Pemeriksaan versi fork kini menggunakan halaman Releases GitHub fork ini.
+
+          ### Kompatibilitas
+          - Kompatibilitas dengan Voxy belum diuji dan belum dapat dijamin.
+          - Ketersediaan runtime Java serta kompatibilitas Minecraft/mod tetap bergantung pada versi yang dipilih.
+
+          ### Catatan instalasi
+          - APK ini menggunakan kunci tanda tangan debug GitHub Actions karena rahasia penandatanganan rilis stabil belum dikonfigurasi.
+          - Jika Android melaporkan konflik tanda tangan, aplikasi yang terpasang mungkin perlu dihapus sebelum memasang APK ini. Cadangkan data launcher dan game terlebih dahulu.
+          EOF
+
+          cat > notes/v1.1.3-arm32-test.1.md <<'EOF'
+          ## NUX Launcher — Pengujian MobileGlues ARM32
+
+          ### Catatan perubahan
+          - Menambahkan build renderer MobileGlues untuk Android `armeabi-v7a` (ARM 32-bit).
+          - Memasukkan `libmobileglues.so` hasil build ke dalam APK ARM32.
+          - Menyediakan APK debug terpisah: universal, khusus ARM64, dan khusus ARM32.
+          - Menyertakan paket port MobileGlues, lisensi, informasi build, dan checksum SHA-256.
+
+          ### Berkas unduhan
+          - `apk-universal.apk` — APK dengan ABI yang didukung.
+          - `apk-arm64.apk` — APK untuk perangkat ARM 64-bit.
+          - `apk-armeabi32.apk` — APK untuk perangkat ARM 32-bit.
+          - `mobileglues-port.zip` — pustaka MobileGlues ARM32, lisensi, dan informasi build.
+          - `MobileGlues-LICENSE` — lisensi dari proyek sumber.
+          - `ARM32-BUILD-INFO.txt` — informasi target build.
+          - `SHA256SUMS.txt` — checksum untuk APK dan paket port.
+
+          ### Status pengujian
+          - Kompilasi CI, pengemasan APK, pemeriksaan tanda tangan APK, dan pemeriksaan isi ABI berhasil.
+          - Minecraft belum diuji langsung pada perangkat ARM32; keberhasilan menjalankan game dan merender grafis belum dijamin.
+          - Ini adalah versi pra-rilis untuk pengujian, bukan rilis stabil.
+          - APK ditandatangani dengan kunci debug. Jika Android melaporkan konflik tanda tangan, jangan hapus aplikasi sebelum data launcher dan game dicadangkan.
+          EOF
+
+          cat > notes/v1.0.10.md <<'EOF'
+          ## NUX Launcher v1.0.10
+
+          ### Fitur dan perubahan
+          - Menambahkan integrasi AI Crash Analyst.
+          - Akun VIP mendapatkan penggunaan AI Crash Analyst tanpa batas.
+          - Akun gratis tetap memiliki batas 5 analisis per hari.
+          - Penggunaan kunci API AI pribadi tetap tanpa batas.
+          - Menambahkan dukungan analisis crash AI secara streaming.
+          - Memperbaiki alur publikasi rilis.
+
+          ### Catatan build
+          - APK ini menggunakan kunci tanda tangan debug GitHub Actions karena rahasia penandatanganan rilis stabil belum dikonfigurasi.
+          - Android mungkin meminta APK NUX yang ditandatangani dengan kunci berbeda dihapus sebelum memasang build ini. Cadangkan data launcher dan game terlebih dahulu.
+          EOF
+
+          cat > notes/release-v1.0.9.md <<'EOF'
+          ## NUXLaunch AlfaCrack v1.0.9
+
+          - Membawa berbagai fitur baru dari NUX Launcher versi 1.0.9 ke fork NUXLaunch AlfaCrack versi 1.0.9.
+          - Menyediakan pengalaman akun VIP seumur hidup tanpa biaya.
+          EOF
+
+          update_release() {
+            local tag="$1"
+            local body_file="$2"
+            local release_id
+            release_id="$(gh api "repos/fathily/nothing/releases/tags/$tag" --jq '.id')"
+            jq -n --rawfile body "$body_file" '{body: $body}' > notes/payload.json
+            gh api --method PATCH "repos/fathily/nothing/releases/$release_id" --input notes/payload.json >/dev/null
+            echo "Updated Indonesian release notes: $tag"
+          }
+
+          update_release "v1.1.3" "notes/v1.1.3.md"
+          update_release "v1.1.3-arm32-test.1" "notes/v1.1.3-arm32-test.1.md"
+          update_release "v1.0.10" "notes/v1.0.10.md"
+          update_release "release-v1.0.9" "notes/release-v1.0.9.md"
