@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    name: Build and publish v1.0.11
+    name: Build and publish v1.1.3
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +38,7 @@ jobs:
           test -s "$APK"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           "$APKSIGNER" verify --verbose "$APK" | head -40
-          cp "$APK" "NuxLauncher-v1.0.11.apk"
+          cp "$APK" "NuxLauncher-v1.1.3.apk"
 
       - name: Publish GitHub Release
         env:
@@ -46,7 +46,7 @@ jobs:
         run: |
           set -e
           cat > release-notes.md <<'EOF'
-          ## NUX Launcher v1.0.11
+          ## NUX Launcher v1.1.3
 
           ### What's changed
           - Fixed virtual controls alignment with the Minecraft game viewport.
@@ -64,9 +64,9 @@ jobs:
           - This build uses the GitHub Actions debug signing key because stable release signing secrets are not configured. If Android reports a signature conflict, the existing app may need to be removed before installing this APK; back up launcher/game data first.
           EOF
 
-          if gh release view v1.0.11 >/dev/null 2>&1; then
-            gh release upload v1.0.11 NuxLauncher-v1.0.11.apk --clobber
-            gh release edit v1.0.11 --title "NUX Launcher v1.0.11" --notes-file release-notes.md
+          if gh release view v1.1.3 >/dev/null 2>&1; then
+            gh release upload v1.1.3 NuxLauncher-v1.1.3.apk --clobber
+            gh release edit v1.1.3 --title "NUX Launcher v1.1.3" --notes-file release-notes.md
           else
-            gh release create v1.0.11 NuxLauncher-v1.0.11.apk               --target "$GITHUB_SHA"               --title "NUX Launcher v1.0.11"               --notes-file release-notes.md
+            gh release create v1.1.3 NuxLauncher-v1.1.3.apk               --target "$GITHUB_SHA"               --title "NUX Launcher v1.1.3"               --notes-file release-notes.md
           fi
