@@ -40,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.israadev.nuxlauncher.core.controls.ControlLayoutManager
 import com.israadev.nuxlauncher.core.controls.KeycodeCatalog
 import com.israadev.nuxlauncher.core.controls.models.CustomControlButton
+import com.israadev.nuxlauncher.core.settings.SettingsManager
 import com.israadev.nuxlauncher.ui.components.NuxBadge
 import com.israadev.nuxlauncher.ui.components.NuxButton
 import com.israadev.nuxlauncher.ui.components.NuxCard
@@ -219,6 +220,7 @@ fun CustomGuiEditorScreen(
 ) {
     val context = LocalContext.current
     val savedButtons by ControlLayoutManager.buttons.collectAsState()
+    val launcherSettings by SettingsManager.settings.collectAsState()
 
     // Working local copy of buttons for live editing
     var buttonsList by remember { mutableStateOf(savedButtons.ifEmpty { ControlLayoutManager.getDefaultButtons() }) }
@@ -254,6 +256,18 @@ fun CustomGuiEditorScreen(
         val screenWidthPx = constraints.maxWidth.toFloat()
         val screenHeightPx = constraints.maxHeight.toFloat()
         val density = LocalDensity.current
+        val renderAspect = when (launcherSettings.gameResolutionMode.uppercase()) {
+            "1920X1080" -> 1920f / 1080f
+            "4:3" -> 4f / 3f
+            "MCSX" -> 1280f / 960f
+            "CUSTOM" -> launcherSettings.customResolutionWidth.coerceAtLeast(1).toFloat() /
+                launcherSettings.customResolutionHeight.coerceAtLeast(1).toFloat()
+            else -> if (screenHeightPx > 0f) screenWidthPx / screenHeightPx else 16f / 9f
+        }
+        val renderWidthPx = minOf(screenWidthPx, screenHeightPx * renderAspect)
+        val renderHeightPx = minOf(screenHeightPx, screenWidthPx / renderAspect)
+        val renderLeftPx = (screenWidthPx - renderWidthPx) / 2f
+        val renderTopPx = (screenHeightPx - renderHeightPx) / 2f
 
         // 1. Dark Blueprint Dot Grid Canvas (High-Contrast, Sleek Tactical Look)
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -290,12 +304,17 @@ fun CustomGuiEditorScreen(
             val btnWidthPx = with(density) { btn.widthDp.dp.toPx() }
             val btnHeightPx = with(density) { btn.heightDp.dp.toPx() }
 
-            // Convert percentage coordinates to pixel center
-            val centerX = screenWidthPx * (btn.xPercent / 100f)
-            val centerY = screenHeightPx * (btn.yPercent / 100f)
+            // Match the game viewport used by GameActivity so editor preview and
+            // live controls share exactly the same normalized coordinate space.
+            val centerX = renderLeftPx + renderWidthPx * (btn.xPercent / 100f)
+            val centerY = renderTopPx + renderHeightPx * (btn.yPercent / 100f)
 
-            val leftPx = (centerX - btnWidthPx / 2f).coerceIn(0f, (screenWidthPx - btnWidthPx).coerceAtLeast(0f))
-            val topPx = (centerY - btnHeightPx / 2f).coerceIn(0f, (screenHeightPx - btnHeightPx).coerceAtLeast(0f))
+            val minLeft = renderLeftPx
+            val maxLeft = (renderLeftPx + renderWidthPx - btnWidthPx).coerceAtLeast(minLeft)
+            val minTop = renderTopPx
+            val maxTop = (renderTopPx + renderHeightPx - btnHeightPx).coerceAtLeast(minTop)
+            val leftPx = (centerX - btnWidthPx / 2f).coerceIn(minLeft, maxLeft)
+            val topPx = (centerY - btnHeightPx / 2f).coerceIn(minTop, maxTop)
 
             val leftDp = with(density) { leftPx.toDp() }
             val topDp = with(density) { topPx.toDp() }
@@ -354,14 +373,20 @@ fun CustomGuiEditorScreen(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 val currentBtn = buttonsList.firstOrNull { it.id == btn.id } ?: return@detectDragGestures
-                                val curCenterX = screenWidthPx * (currentBtn.xPercent / 100f)
-                                val curCenterY = screenHeightPx * (currentBtn.yPercent / 100f)
+                                val curCenterX = renderLeftPx + renderWidthPx * (currentBtn.xPercent / 100f)
+                                val curCenterY = renderTopPx + renderHeightPx * (currentBtn.yPercent / 100f)
 
-                                val newCenterX = (curCenterX + dragAmount.x).coerceIn(btnWidthPx / 2f, screenWidthPx - btnWidthPx / 2f)
-                                val newCenterY = (curCenterY + dragAmount.y).coerceIn(btnHeightPx / 2f, screenHeightPx - btnHeightPx / 2f)
+                                val newCenterX = (curCenterX + dragAmount.x).coerceIn(
+                                    renderLeftPx + btnWidthPx / 2f,
+                                    renderLeftPx + renderWidthPx - btnWidthPx / 2f
+                                )
+                                val newCenterY = (curCenterY + dragAmount.y).coerceIn(
+                                    renderTopPx + btnHeightPx / 2f,
+                                    renderTopPx + renderHeightPx - btnHeightPx / 2f
+                                )
 
-                                val newXPercent = (newCenterX / screenWidthPx) * 100f
-                                val newYPercent = (newCenterY / screenHeightPx) * 100f
+                                val newXPercent = ((newCenterX - renderLeftPx) / renderWidthPx.coerceAtLeast(1f)) * 100f
+                                val newYPercent = ((newCenterY - renderTopPx) / renderHeightPx.coerceAtLeast(1f)) * 100f
 
                                 buttonsList = buttonsList.map {
                                     if (it.id == btn.id) it.copy(xPercent = newXPercent, yPercent = newYPercent) else it
