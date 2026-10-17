@@ -1,4 +1,4 @@
-name: Port MobileGlues renderer to ARM32
+name: Build optimized NUX APKs — ARM32, ARM64, Universal
 
 on:
   push:
@@ -171,11 +171,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
-          TAG="v1.1.3-arm32-test.1"
+          TAG="v1.1.3-arm-test.2"
           cat > release-notes.md <<'EOF'
-          ## NUX Launcher — Pengujian MobileGlues ARM32
+          ## NUX Launcher — Pengujian ARM32, ARM64, dan Universal
 
           ### Catatan perubahan
+          - Memasukkan preset Auto Optimize yang lebih konservatif untuk perangkat dengan RAM/CPU terbatas.
+          - Menyediakan APK terpisah untuk ARM64, ARM32, dan universal agar pengguna bisa memilih ABI yang sesuai.
           - Menambahkan build renderer MobileGlues untuk Android `armeabi-v7a` (ARM 32-bit).
           - Memasukkan `libmobileglues.so` hasil build ke dalam APK ARM32.
           - Menyediakan APK debug terpisah: universal, khusus ARM64, dan khusus ARM32.
@@ -191,7 +193,10 @@ jobs:
           - `SHA256SUMS.txt` — checksum untuk APK dan paket port.
 
           ### Status pengujian
-          - Kompilasi CI, pengemasan APK, pemeriksaan tanda tangan APK, dan pemeriksaan isi ABI telah berhasil sebelum rilis ini diterbitkan.
+          - Setiap APK dibangun dari commit fork terbaru yang dipicu oleh workflow ini.
+          - CI memeriksa tanda tangan APK dan memastikan isi ABI sesuai target.
+          - Preset performa mengurangi render distance, simulation distance, partikel, dan batas FPS pada perangkat kelas bawah.
+          - Kompilasi CI, pengemasan APK, pemeriksaan tanda tangan APK, dan pemeriksaan isi ABI harus berhasil sebelum rilis ini diterbitkan.
           - Minecraft belum diuji langsung pada perangkat ARM32; keberhasilan menjalankan game dan render grafis belum dijamin.
           - Ini adalah versi pra-rilis untuk pengujian, bukan rilis stabil.
           - APK ditandatangani dengan kunci debug. Jika Android melaporkan konflik tanda tangan, jangan hapus aplikasi sebelum data launcher dan game dicadangkan.
@@ -199,7 +204,7 @@ jobs:
 
           if gh release view "$TAG" --repo fathily/nothing >/dev/null 2>&1; then
             gh release upload "$TAG" release-files/apk-universal.apk release-files/apk-arm64.apk release-files/apk-armeabi32.apk release-files/mobileglues-port.zip release-files/MobileGlues-LICENSE release-files/ARM32-BUILD-INFO.txt release-files/SHA256SUMS.txt --clobber --repo fathily/nothing
-            gh release edit "$TAG" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease --repo fathily/nothing
+            gh release edit "$TAG" --title "NUX Launcher — ARM32 / ARM64 / Universal Performance Test" --notes-file release-notes.md --prerelease --repo fathily/nothing
           else
             gh release create "$TAG" release-files/apk-universal.apk release-files/apk-arm64.apk release-files/apk-armeabi32.apk release-files/mobileglues-port.zip release-files/MobileGlues-LICENSE release-files/ARM32-BUILD-INFO.txt release-files/SHA256SUMS.txt --target "$GITHUB_SHA" --title "NUX Launcher — MobileGlues ARM32 Test" --notes-file release-notes.md --prerelease --repo fathily/nothing
           fi
