@@ -1,0 +1,78 @@
+name: Sinkronisasi Upstream NUX
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/sync-upstream.yml"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: nux-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Ambil perubahan upstream dan verifikasi build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork dengan riwayat penuh
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ambil upstream terbaru
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/IsraaDeveloper/nuxlabs.git
+          git fetch upstream main --tags
+          echo "UPSTREAM_SHA=$(git rev-parse upstream/main)" >> "$GITHUB_ENV"
+          echo "FORK_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Upstream HEAD: $(git log -1 --oneline upstream/main)"
+          echo "Fork HEAD: $(git log -1 --oneline HEAD)"
+          git log --oneline --left-right HEAD...upstream/main | head -n 120
+
+      - name: Buat branch sinkronisasi dan gabungkan upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="sync/upstream-${GITHUB_RUN_NUMBER}"
+          git switch -c "$BRANCH"
+          if ! git merge --no-edit upstream/main; then
+            echo "::error::Merge upstream konflik. Branch main tidak diubah; daftar konflik:"
+            git diff --name-only --diff-filter=U || true
+            exit 1
+          fi
+          echo "SYNC_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+      - name: Build Android debug untuk verifikasi
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Pastikan APK terbentuk
+        run: test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Push branch dan buat PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_SHA: ${{ env.UPSTREAM_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin "$SYNC_BRANCH"
+          if ! gh pr view "$SYNC_BRANCH" --json number >/dev/null 2>&1; then
+            gh pr create \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "Sinkronisasi upstream NUX terbaru" \
+              --body "Sinkronisasi otomatis dari `IsraaDeveloper/nuxlabs`. Upstream HEAD: `$UPSTREAM_SHA`. Build debug harus lolos sebelum PR dibuat. Periksa fitur khas fork dan changelog sebelum merge."
+          fi
