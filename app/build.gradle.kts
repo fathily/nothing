@@ -13,7 +13,11 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val rawServerUrl: String = localProperties.getProperty("nux.server.url") ?: ""
+val rawServerUrl: String = System.getenv("NUX_SERVER_URL")?.takeIf { it.isNotBlank() }
+    ?: localProperties.getProperty("nux.server.url")
+    ?: ""
+val appVersionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 14
+val appVersionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.3"
 
 android {
     namespace = "com.israadev.nuxlauncher"
@@ -23,8 +27,8 @@ android {
         applicationId = "com.israadev.nuxlauncher"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.1.3"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         buildConfigField("String", "SERVER_BASE_URL", "\"$rawServerUrl\"")
 
