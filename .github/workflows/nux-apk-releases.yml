@@ -82,7 +82,7 @@ jobs:
 
   publish-stable:
     name: Publish stable Release
-    if: env.CHANNEL == 'stable' || env.CHANNEL == 'both'
+    if: github.event_name == 'push' || inputs.channel == 'stable' || inputs.channel == 'both'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -104,7 +104,7 @@ jobs:
 
   publish-prerelease:
     name: Publish ARM test Pre-release
-    if: env.CHANNEL == 'prerelease' || env.CHANNEL == 'both'
+    if: github.event_name == 'push' || inputs.channel == 'prerelease' || inputs.channel == 'both'
     needs: build
     runs-on: ubuntu-latest
     steps:
