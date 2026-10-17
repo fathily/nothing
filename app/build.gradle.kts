@@ -18,6 +18,7 @@ val rawServerUrl: String = System.getenv("NUX_SERVER_URL")?.takeIf { it.isNotBla
     ?: ""
 val appVersionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 14
 val appVersionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.3"
+val requestedAbi = System.getenv("APK_ABI")?.trim()?.lowercase() ?: "universal"
 
 android {
     namespace = "com.israadev.nuxlauncher"
@@ -38,7 +39,13 @@ android {
         }
 
         ndk {
-            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))
+            abiFilters.clear()
+            when (requestedAbi) {
+                "arm64" -> abiFilters.add("arm64-v8a")
+                "arm32" -> abiFilters.add("armeabi-v7a")
+                "universal" -> abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))
+                else -> throw GradleException("Unsupported APK_ABI '$requestedAbi'. Use universal, arm64, or arm32.")
+            }
         }
     }
 
@@ -75,6 +82,8 @@ android {
             isMinifyEnabled = false
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -109,7 +118,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+    implementation(libs.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
