@@ -713,15 +713,17 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                         val lowEnd = totalRamMb <= 4096 || cores <= 4
                         val ultraLow = totalRamMb <= 3072 || cores <= 2
 
+                        // Conservative defaults for devices with limited RAM/CPU.
+                        // Lower chunk counts reduce CPU work and chunk memory pressure.
                         val renderDistance = when {
-                            ultraLow -> 4
-                            lowEnd -> 5
-                            totalRamMb <= 6144 -> 7
+                            ultraLow -> 3
+                            lowEnd -> 4
+                            totalRamMb <= 6144 -> 6
                             else -> 8
                         }
                         val simulationDistance = when {
-                            ultraLow -> 3
-                            lowEnd -> 4
+                            ultraLow -> 2
+                            lowEnd -> 3
                             else -> 5
                         }
 
@@ -734,8 +736,8 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                             }
                         }.getOrDefault(60f)
                         val targetFps = when {
-                            ultraLow -> 45
-                            lowEnd -> 60
+                            ultraLow -> 30
+                            lowEnd -> 45
                             refreshRate >= 90f -> 90
                             else -> 60
                         }
@@ -747,7 +749,7 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                         set("clouds", "false")
                         set("renderClouds", "false")
                         set("entityShadows", "false")
-                        set("particles", if (ultraLow) "1" else "2")
+                        set("particles", if (ultraLow) "0" else if (lowEnd) "1" else "2")
                         set("ao", "0")
                         set("mipmapLevels", "0")
                         set("anisotropicFiltering", "1")
