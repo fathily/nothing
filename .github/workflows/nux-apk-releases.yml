@@ -1,6 +1,8 @@
 name: NUX APK Releases
 
 on:
+  push:
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       version:
@@ -18,6 +20,10 @@ on:
 
 permissions:
   contents: write
+
+env:
+  VERSION: ${{ inputs.version || '1.1.4' }}
+  CHANNEL: ${{ inputs.channel || 'both' }}
 
 concurrency:
   group: nux-apk-releases
@@ -47,7 +53,7 @@ jobs:
       - name: Validate version
         shell: bash
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ env.VERSION }}
         run: |
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Invalid version: $VERSION"
@@ -56,7 +62,7 @@ jobs:
 
       - name: Build APK
         env:
-          APP_VERSION_NAME: ${{ inputs.version }}
+          APP_VERSION_NAME: ${{ env.VERSION }}
           APP_VERSION_CODE: ${{ 1000 + github.run_number }}
           APK_ABI: ${{ matrix.abi }}
           NUX_SERVER_URL: ${{ secrets.NUX_SERVER_URL || vars.NUX_SERVER_URL }}
@@ -64,32 +70,32 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon clean assembleRelease
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/NUX-${{ inputs.version }}-${{ matrix.abi }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/NUX-${{ env.VERSION }}-${{ matrix.abi }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NUX-${{ inputs.version }}-${{ matrix.abi }}
+          name: NUX-${{ env.VERSION }}-${{ matrix.abi }}
           path: dist/*.apk
           if-no-files-found: error
           retention-days: 14
 
   publish-stable:
     name: Publish stable Release
-    if: inputs.channel == 'stable' || inputs.channel == 'both'
+    if: env.CHANNEL == 'stable' || env.CHANNEL == 'both'
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download universal APK
         uses: actions/download-artifact@v4
         with:
-          name: NUX-${{ inputs.version }}-universal
+          name: NUX-${{ env.VERSION }}-universal
           path: dist
 
       - name: Publish stable Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ env.VERSION }}
         run: |
           gh release create "v$VERSION" dist/NUX-"$VERSION"-universal.apk \
             --title "NUX Launcher $VERSION" \
@@ -98,21 +104,21 @@ jobs:
 
   publish-prerelease:
     name: Publish ARM test Pre-release
-    if: inputs.channel == 'prerelease' || inputs.channel == 'both'
+    if: env.CHANNEL == 'prerelease' || env.CHANNEL == 'both'
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download all ABI APKs
         uses: actions/download-artifact@v4
         with:
-          pattern: NUX-${{ inputs.version }}-*
+          pattern: NUX-${{ env.VERSION }}-*
           path: dist
           merge-multiple: true
 
       - name: Publish Pre-release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ env.VERSION }}
         run: |
           gh release create "v$VERSION-arm-test" dist/*.apk \
             --title "NUX Launcher $VERSION — ARM test builds" \
