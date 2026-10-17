@@ -5,6 +5,7 @@ import com.israadev.nuxlauncher.core.crash.CrashManager
 import com.israadev.nuxlauncher.core.renderer.NuxRendererRegistry
 import com.israadev.nuxlauncher.ui.activities.ErrorActivity
 import com.israadev.nuxlauncher.ui.components.GameLoadingOverlay
+import com.israadev.nuxlauncher.ui.dialogs.InGameSettingsDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -372,6 +373,12 @@ class GameActivity : ComponentActivity(), SurfaceHolder.Callback {
                         val (targetWidth, targetHeight) = getScaledDisplayDimensions()
                         surfaceHolder.setFixedSize(targetWidth, targetHeight)
                         surfaceHolder.addCallback(this@GameActivity)
+                    },
+                    onResolutionChange = { newRatio ->
+                        val current = SettingsManager.settings.value
+                        SettingsManager.updateSettings(this@GameActivity, current.copy(resolutionRatio = newRatio))
+                        val (targetWidth, targetHeight) = getScaledDisplayDimensions()
+                        surfaceHolderRef?.setFixedSize(targetWidth, targetHeight)
                     },
                     onExit = {
                         isManualExit = true
@@ -1323,6 +1330,7 @@ fun GameScreen(
     isControlVisibleState: MutableState<Boolean>,
     isGameRenderingState: MutableState<Boolean>,
     onSurfaceReady: (SurfaceHolder) -> Unit,
+    onResolutionChange: (Int) -> Unit = {},
     onExit: () -> Unit
 ) {
     var isControlVisible by isControlVisibleState
@@ -1330,6 +1338,7 @@ fun GameScreen(
     var isManualLoadingDismissed by remember { mutableStateOf(false) }
     val showLoadingOverlay = !isGameRendering && !isManualLoadingDismissed
 
+    var showInGameSettingsDialog by remember { mutableStateOf(false) }
     var isKeyboardRequested by remember { mutableStateOf(false) }
     var isConsoleVisible by remember { mutableStateOf(false) }
     var isConsoleExpanded by remember { mutableStateOf(false) }
@@ -1577,7 +1586,7 @@ fun GameScreen(
                 ) {
                     // Clickable FPS badge in console (Klik ke-3 untuk kembali normal)
                     Box(
-                        modifier = Modifier.clickable { cycleFpsMode() }
+                        modifier = Modifier.clickable { showInGameSettingsDialog = true }
                     ) {
                         NuxBadge(
                             text = if (currentFps > 0) "$currentFps FPS" else "FPS: --",
@@ -1904,6 +1913,46 @@ fun GameScreen(
             }
         }
     }
+
+        InGameSettingsDialog(
+            visible = showInGameSettingsDialog,
+            onDismissRequest = { showInGameSettingsDialog = false },
+            currentFps = currentFps,
+            instanceName = instanceName,
+            mcVersion = mcVersion,
+            currentResolutionRatio = launcherSettings.resolutionRatio,
+            onResolutionChange = { newRatio -> onResolutionChange(newRatio) },
+            fpsMode = fpsMode,
+            onFpsModeChange = { newMode -> fpsMode = newMode },
+            onOpenConsoleLog = {
+                fpsMode = FpsMode.SHOW_LOG
+                isConsoleVisible = true
+            },
+            cursorSensitivity = launcherSettings.cursorSensitivity,
+            onCursorSensitivityChange = { newSens ->
+                SettingsManager.updateSettings(context, launcherSettings.copy(cursorSensitivity = newSens))
+            },
+            captureSensitivity = launcherSettings.captureSensitivity,
+            onCaptureSensitivityChange = { newSens ->
+                SettingsManager.updateSettings(context, launcherSettings.copy(captureSensitivity = newSens))
+            },
+            mouseControlMode = mouseControlMode,
+            onMouseControlModeChange = { newMode ->
+                SettingsManager.updateSettings(
+                    context,
+                    launcherSettings.copy(mouseControlMode = if (newMode == MouseControlMode.CLICK) "CLICK" else "SLIDE")
+                )
+            },
+            isControlVisible = isControlVisible,
+            onToggleControlVisibility = { isControlVisible = !isControlVisible },
+            onRequestKeyboard = { isKeyboardRequested = true },
+            onSendKeycode = { keycode ->
+                CallbackBridge.sendKeyPress(keycode, true)
+                CallbackBridge.sendKeyPress(keycode, false)
+            },
+            onForceExitRequest = { showExitConfirmDialog = true }
+        )
+
 }
 
 @Composable
