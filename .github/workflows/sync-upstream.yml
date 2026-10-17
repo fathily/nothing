@@ -33,7 +33,8 @@ jobs:
         run: |
           set -euo pipefail
           git remote add upstream https://github.com/IsraaDeveloper/nuxlabs.git
-          git fetch upstream main --tags
+          git fetch upstream main
+          git fetch upstream refs/tags/v1.1.4:refs/tags/upstream/v1.1.4
           echo "UPSTREAM_SHA=$(git rev-parse upstream/main)" >> "$GITHUB_ENV"
           echo "FORK_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "Upstream HEAD: $(git log -1 --oneline upstream/main)"
