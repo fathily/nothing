@@ -30,7 +30,7 @@ jobs:
       - name: Build APK
         env:
           APP_VERSION_NAME: "1.1.4"
-          APP_VERSION_CODE: ${{ 1104 + github.run_attempt }}
+          APP_VERSION_CODE: "1104"
           APK_ABI: ${{ matrix.abi }}
           NUX_SERVER_URL: ${{ secrets.NUX_SERVER_URL || vars.NUX_SERVER_URL }}
         run: |
