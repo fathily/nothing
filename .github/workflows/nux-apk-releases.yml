@@ -58,12 +58,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.1.4 >/dev/null 2>&1; then
-            gh release upload v1.1.4 dist/NUX-1.1.4-universal.apk --clobber
+          echo "Publishing stable release to fathily/nothing"
+          gh release view v1.1.4 --repo fathily/nothing >/dev/null 2>&1 && EXISTS=true || EXISTS=false
+          if [ "$EXISTS" = "true" ]; then
+            gh release upload v1.1.4 dist/NUX-1.1.4-universal.apk --clobber --repo fathily/nothing
           else
             gh release create v1.1.4 dist/NUX-1.1.4-universal.apk \
+              --repo fathily/nothing \
               --title "NUX Launcher 1.1.4" \
-              --notes "Stable NUX Launcher release. Universal APK."
+              --notes "Stable NUX Launcher release. Universal APK." \
+              --latest
           fi
 
   publish-prerelease:
@@ -80,10 +84,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.1.4-arm-test >/dev/null 2>&1; then
-            gh release upload v1.1.4-arm-test dist/*.apk --clobber
+          echo "Publishing mixed prerelease to fathily/nothing"
+          gh release view v1.1.4-arm-test --repo fathily/nothing >/dev/null 2>&1 && EXISTS=true || EXISTS=false
+          if [ "$EXISTS" = "true" ]; then
+            gh release upload v1.1.4-arm-test dist/*.apk --clobber --repo fathily/nothing
           else
             gh release create v1.1.4-arm-test dist/*.apk \
+              --repo fathily/nothing \
               --title "NUX Launcher 1.1.4 — ARM32 / ARM64 / Universal" \
               --notes "Mixed fork testing build: Universal, ARM64 (arm64-v8a), and ARM32 (armeabi-v7a). Debug-signed if release signing secrets are not configured. Back up app data before installing over another signed build." \
               --prerelease
