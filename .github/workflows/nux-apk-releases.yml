@@ -58,6 +58,18 @@ jobs:
         run: |
           cat > dist/stable-notes.md <<'EOF'
           # NUX Launcher 1.1.4 — Stable
+
+## 🚀 LIHAT APLIKASI & PROYEK LAIN
+
+**📱 ZL2+ Liq — ZalithLauncher2Plus Liquid Glass**
+UI launcher Minecraft bergaya Liquid Glass.
+👉 https://github.com/fathily/ZalithLauncher2PlusLiquidGlass
+
+**🎮 NUX Launcher Original (Upstream)**
+Repositori resmi upstream NUX Launcher.
+👉 https://github.com/IsraaDeveloper/nuxlabs
+
+---
           
           Rilis ini mengikuti basis NUX Launcher upstream v1.1.4. Berikut ringkasan perubahan yang tercatat pada fork ini dibanding rilis fork v1.1.3.
           
@@ -111,6 +123,18 @@ jobs:
         run: |
           cat > dist/prerelease-notes.md <<'EOF'
           # NUX Launcher 1.1.4 — Pre-release (build campuran)
+
+## 🚀 LIHAT APLIKASI & PROYEK LAIN
+
+**📱 ZL2+ Liq — ZalithLauncher2Plus Liquid Glass**
+UI launcher Minecraft bergaya Liquid Glass.
+👉 https://github.com/fathily/ZalithLauncher2PlusLiquidGlass
+
+**🎮 NUX Launcher Original (Upstream)**
+Repositori resmi upstream NUX Launcher.
+👉 https://github.com/IsraaDeveloper/nuxlabs
+
+---
           
           Ini adalah build pengujian fork, bukan paket stabil. Tersedia tiga APK:
           - **Universal** — untuk berbagai ABI yang disertakan dalam paket.
