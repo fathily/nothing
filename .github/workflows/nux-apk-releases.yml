@@ -80,7 +80,7 @@ jobs:
           - **Java/mod:** versi Java yang tepat bergantung pada versi Minecraft dan mod.
           - Daftar ini merangkum perubahan yang tercatat pada kode dan pipeline; bukan jaminan semua crash/performa di semua perangkat sudah teratasi.
           EOF
-                - name: Publish stable release
+      - name: Publish stable release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -140,7 +140,7 @@ jobs:
           - **Minecraft/mod/Java:** kompatibilitas dan performa berbeda menurut perangkat, versi game, renderer, mod, dan runtime Java.
           - Jika menemukan crash, sertakan `latest_game.log`, ABI perangkat, versi Android, versi Minecraft, renderer, dan runtime Java yang dipilih.
           EOF
-                - name: Publish ARM test prerelease
+      - name: Publish ARM test prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
