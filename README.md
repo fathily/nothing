@@ -15,6 +15,22 @@ Dibangun dari awal menggunakan teknologi modern Android (**Jetpack Compose**), s
 
 ---
 
+## 🚀 LIHAT APLIKASI & PROYEK LAIN
+
+**🎮 NUX Launcher — Release Utama (Universal)**  
+Unduh rilis utama NUX Launcher.  
+👉 https://github.com/fathily/nothing/releases/tag/v1.1.4
+
+**🎮 NUX Launcher — Pre-release (ARM32, ARM64 & Universal)**  
+Build pengujian untuk perangkat ARM 32-bit, ARM 64-bit, dan Universal.  
+👉 https://github.com/fathily/nothing/releases/tag/v1.1.4-arm-test
+
+**🎮 NUX Launcher Original (Upstream)**  
+Repositori resmi upstream NUX Launcher.  
+👉 https://github.com/IsraaDeveloper/nuxlabs
+
+---
+
 ## 📖 Daftar Isi
 - [✨ Fitur Utama](#-fitur-utama)
 - [🛠️ Arsitektur & Tech Stack](#️-arsitektur--tech-stack)
