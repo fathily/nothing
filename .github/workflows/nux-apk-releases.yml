@@ -57,30 +57,30 @@ jobs:
       - name: Write stable changelog
         run: |
           cat > dist/stable-notes.md <<'EOF'
-# NUX Launcher 1.1.4 — Stable
-
-Rilis ini mengikuti basis NUX Launcher upstream v1.1.4. Berikut ringkasan perubahan yang tercatat pada fork ini dibanding rilis fork v1.1.3.
-
-## Yang berubah
-- **Dialog pengaturan di dalam game:** mengintegrasikan dialog In-Game Settings dari upstream agar pengaturan yang didukung dapat dibuka dari UI dalam game.
-- **Optimasi perangkat kelas bawah:** menyesuaikan preset Auto Optimize untuk perangkat dengan sumber daya terbatas. Hasilnya tetap bergantung pada perangkat, Android, Minecraft, dan mod.
-- **Build dan versi rilis:** memperbaiki konfigurasi build dan penomoran versi untuk menyiapkan paket v1.1.4.
-- **Perbaikan dari v1.1.3 tetap disertakan:** perataan kontrol virtual, penyelarasan editor Custom GUI dengan posisi kontrol dalam game, pemilih Java AUTO/8/17/21/25, prioritas pilihan Java global, pemilihan model gratis AI Crash Analyst, dan pemeriksaan update melalui Releases fork.
-
-## Error versi/build sebelumnya yang ditangani
-- Memperbaiki konfigurasi Android SDK yang menghambat pipeline build ARM32.
-- Memperbaiki filter ABI yang bisa terbawa antarvarian saat beberapa APK dibuat dalam satu pipeline.
-- Memperbaiki alias dependensi Compose Activity yang dapat menggagalkan konfigurasi/build.
-- Menjaga version code rilis tetap lebih tinggi dari versi sebelumnya agar Android tidak menolak pemasangan sebagai downgrade.
-- Memperbaiki konfigurasi workflow Actions untuk build dan publikasi rilis otomatis.
-
-## Catatan dan batasan
-- **Tanda tangan APK:** jika kunci signing rilis belum dikonfigurasi, APK CI dapat memakai debug key. Android mungkin menolak pemasangan di atas APK bertanda tangan berbeda; cadangkan data launcher/game sebelum mengganti APK.
-- **Voxy:** kompatibilitas belum terverifikasi dan tidak dijamin.
-- **Java/mod:** versi Java yang tepat bergantung pada versi Minecraft dan mod.
-- Daftar ini merangkum perubahan yang tercatat pada kode dan pipeline; bukan jaminan semua crash/performa di semua perangkat sudah teratasi.
-EOF
-      - name: Publish stable release
+          # NUX Launcher 1.1.4 — Stable
+          
+          Rilis ini mengikuti basis NUX Launcher upstream v1.1.4. Berikut ringkasan perubahan yang tercatat pada fork ini dibanding rilis fork v1.1.3.
+          
+          ## Yang berubah
+          - **Dialog pengaturan di dalam game:** mengintegrasikan dialog In-Game Settings dari upstream agar pengaturan yang didukung dapat dibuka dari UI dalam game.
+          - **Optimasi perangkat kelas bawah:** menyesuaikan preset Auto Optimize untuk perangkat dengan sumber daya terbatas. Hasilnya tetap bergantung pada perangkat, Android, Minecraft, dan mod.
+          - **Build dan versi rilis:** memperbaiki konfigurasi build dan penomoran versi untuk menyiapkan paket v1.1.4.
+          - **Perbaikan dari v1.1.3 tetap disertakan:** perataan kontrol virtual, penyelarasan editor Custom GUI dengan posisi kontrol dalam game, pemilih Java AUTO/8/17/21/25, prioritas pilihan Java global, pemilihan model gratis AI Crash Analyst, dan pemeriksaan update melalui Releases fork.
+          
+          ## Error versi/build sebelumnya yang ditangani
+          - Memperbaiki konfigurasi Android SDK yang menghambat pipeline build ARM32.
+          - Memperbaiki filter ABI yang bisa terbawa antarvarian saat beberapa APK dibuat dalam satu pipeline.
+          - Memperbaiki alias dependensi Compose Activity yang dapat menggagalkan konfigurasi/build.
+          - Menjaga version code rilis tetap lebih tinggi dari versi sebelumnya agar Android tidak menolak pemasangan sebagai downgrade.
+          - Memperbaiki konfigurasi workflow Actions untuk build dan publikasi rilis otomatis.
+          
+          ## Catatan dan batasan
+          - **Tanda tangan APK:** jika kunci signing rilis belum dikonfigurasi, APK CI dapat memakai debug key. Android mungkin menolak pemasangan di atas APK bertanda tangan berbeda; cadangkan data launcher/game sebelum mengganti APK.
+          - **Voxy:** kompatibilitas belum terverifikasi dan tidak dijamin.
+          - **Java/mod:** versi Java yang tepat bergantung pada versi Minecraft dan mod.
+          - Daftar ini merangkum perubahan yang tercatat pada kode dan pipeline; bukan jaminan semua crash/performa di semua perangkat sudah teratasi.
+          EOF
+                - name: Publish stable release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -110,37 +110,37 @@ EOF
       - name: Write mixed-build changelog
         run: |
           cat > dist/prerelease-notes.md <<'EOF'
-# NUX Launcher 1.1.4 — Pre-release (build campuran)
-
-Ini adalah build pengujian fork, bukan paket stabil. Tersedia tiga APK:
-- **Universal** — untuk berbagai ABI yang disertakan dalam paket.
-- **ARM64** — untuk perangkat ARM64 (arm64-v8a).
-- **ARM32** — untuk perangkat ARM 32-bit (armeabi-v7a).
-
-## Perubahan sejak fork v1.1.3
-- Mengintegrasikan dialog pengaturan dalam game dari upstream.
-- Menyetel preset Auto Optimize untuk membantu perangkat kelas bawah.
-- Menambahkan pipeline build terpisah untuk Universal, ARM64, dan ARM32.
-- Memperbaiki pemisahan filter ABI agar konfigurasi satu varian tidak bocor ke APK varian lain.
-- Memperbaiki langkah konfigurasi Android SDK/dependensi yang sebelumnya menghambat build ARM32.
-- Memperbaiki workflow Actions untuk mengunggah APK varian dan memperbarui catatan rilis.
-- Mempertahankan perbaikan kontrol virtual, Custom GUI, pemilih Java AUTO/8/17/21/25, pilihan Java global, AI Crash Analyst, dan sumber pemeriksaan update dari v1.1.3.
-
-## Error versi/build sebelumnya yang ditangani
-- Kegagalan konfigurasi Android SDK pada job build ARM32.
-- Filter ABI yang berpotensi tidak ter-reset saat membuat beberapa APK berurutan.
-- Alias dependensi Compose Activity yang tidak cocok.
-- Version code yang perlu dijaga lebih tinggi dari rilis sebelumnya agar Android tidak menganggapnya downgrade.
-- Kesalahan ekspresi/config workflow Actions dan target repo saat publikasi Release.
-
-## Diketahui / belum dijamin
-- **Build pengujian:** keberhasilan compile tidak membuktikan semua renderer/mod sudah berjalan di perangkat nyata.
-- **Voxy:** kompatibilitas belum terverifikasi.
-- **Tanda tangan:** jika release signing key belum tersedia, APK dapat memakai debug key dan mungkin tidak bisa dipasang sebagai update langsung di atas APK dengan signature berbeda.
-- **Minecraft/mod/Java:** kompatibilitas dan performa berbeda menurut perangkat, versi game, renderer, mod, dan runtime Java.
-- Jika menemukan crash, sertakan `latest_game.log`, ABI perangkat, versi Android, versi Minecraft, renderer, dan runtime Java yang dipilih.
-EOF
-      - name: Publish ARM test prerelease
+          # NUX Launcher 1.1.4 — Pre-release (build campuran)
+          
+          Ini adalah build pengujian fork, bukan paket stabil. Tersedia tiga APK:
+          - **Universal** — untuk berbagai ABI yang disertakan dalam paket.
+          - **ARM64** — untuk perangkat ARM64 (arm64-v8a).
+          - **ARM32** — untuk perangkat ARM 32-bit (armeabi-v7a).
+          
+          ## Perubahan sejak fork v1.1.3
+          - Mengintegrasikan dialog pengaturan dalam game dari upstream.
+          - Menyetel preset Auto Optimize untuk membantu perangkat kelas bawah.
+          - Menambahkan pipeline build terpisah untuk Universal, ARM64, dan ARM32.
+          - Memperbaiki pemisahan filter ABI agar konfigurasi satu varian tidak bocor ke APK varian lain.
+          - Memperbaiki langkah konfigurasi Android SDK/dependensi yang sebelumnya menghambat build ARM32.
+          - Memperbaiki workflow Actions untuk mengunggah APK varian dan memperbarui catatan rilis.
+          - Mempertahankan perbaikan kontrol virtual, Custom GUI, pemilih Java AUTO/8/17/21/25, pilihan Java global, AI Crash Analyst, dan sumber pemeriksaan update dari v1.1.3.
+          
+          ## Error versi/build sebelumnya yang ditangani
+          - Kegagalan konfigurasi Android SDK pada job build ARM32.
+          - Filter ABI yang berpotensi tidak ter-reset saat membuat beberapa APK berurutan.
+          - Alias dependensi Compose Activity yang tidak cocok.
+          - Version code yang perlu dijaga lebih tinggi dari rilis sebelumnya agar Android tidak menganggapnya downgrade.
+          - Kesalahan ekspresi/config workflow Actions dan target repo saat publikasi Release.
+          
+          ## Diketahui / belum dijamin
+          - **Build pengujian:** keberhasilan compile tidak membuktikan semua renderer/mod sudah berjalan di perangkat nyata.
+          - **Voxy:** kompatibilitas belum terverifikasi.
+          - **Tanda tangan:** jika release signing key belum tersedia, APK dapat memakai debug key dan mungkin tidak bisa dipasang sebagai update langsung di atas APK dengan signature berbeda.
+          - **Minecraft/mod/Java:** kompatibilitas dan performa berbeda menurut perangkat, versi game, renderer, mod, dan runtime Java.
+          - Jika menemukan crash, sertakan `latest_game.log`, ABI perangkat, versi Android, versi Minecraft, renderer, dan runtime Java yang dipilih.
+          EOF
+                - name: Publish ARM test prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
